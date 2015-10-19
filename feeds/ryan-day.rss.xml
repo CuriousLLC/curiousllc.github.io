@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Working with hardware</title><link>/</link><description></description><atom:link href="/feeds/ryan-day.rss.xml" rel="self"></atom:link><lastBuildDate>Sat, 29 Aug 2015 10:45:00 -0400</lastBuildDate><item><title>Testing Asynchronous Qt Code</title><link>/testing-asynchronous-qt-code.html</link><description>&lt;p&gt;&lt;a class="reference external" href="http://fcw.com"&gt;FCW&lt;/a&gt; has recently &lt;a class="reference external" href="http://fcw.com/articles/2014/07/24/it-flop-at-ssa.aspx"&gt;reported a failed project by the Social Security Administration&lt;/a&gt;. The project
+cost $300 million before it was finally canceled. Ad Hoc LLC does post mortems and has found multiple
+similartities between this failure and the Healthcare.gov failure. Primarily that web development is
+not the core focus of the large firms winning the bids.&lt;/p&gt;
+</description><dc:creator xmlns:dc="http://purl.org/dc/elements/1.1/">Ryan Day</dc:creator><pubDate>Sat, 29 Aug 2015 10:45:00 -0400</pubDate><guid>tag:,2015-08-29:testing-asynchronous-qt-code.html</guid></item></channel></rss>

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link href='//fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,700,400italic' rel='stylesheet' type='text/css'>
+  <link rel="stylesheet" type="text/css" href="/theme/css/style.min.css">
+  <link rel="stylesheet" type="text/css" href="/theme/css/pygments.min.css">
+  <link rel="stylesheet" type="text/css" href="/theme/css/font-awesome.min.css">
+
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="" />
+<meta name="author" content="ryanday" />
+<meta name="description" content="Get GNURadio running on a Raspberry Pi2" />
+<meta name="keywords" content="">
+<meta property="og:site_name" content="Working with hardware"/>
+<meta property="og:title" content="GNURadio Raspberry Pi"/>
+<meta property="og:description" content="Get GNURadio running on a Raspberry Pi2"/>
+<meta property="og:locale" content="en_US"/>
+<meta property="og:url" content="/gnuradio-raspberry-pi.html"/>
+<meta property="og:type" content="article"/>
+<meta property="article:published_time" content="2015-08-20 19:45:00-04:00"/>
+<meta property="article:modified_time" content=""/>
+<meta property="article:author" content="/author/ryanday.html">
+<meta property="article:section" content="gnuradio raspberrypi"/>
+<meta property="og:image" content="https://avatars3.githubusercontent.com/u/6845642?v=3&s=200">  <title>Working with hardware &ndash; GNURadio Raspberry Pi</title>
+</head>
+<body>
+  <aside>
+    <div>
+      <a href="">
+        <img src="https://avatars3.githubusercontent.com/u/6845642?v=3&s=200" alt="" title="">
+      </a>
+      <h1><a href=""></a></h1>
+      <p></p>
+      <nav>
+        <ul class="list">
+          <li><a href="http://curiousllc.com/" target="_blank">Curious LLC</a></li>
+          <li><a href="http://www.meetup.com/NOVA-Python" target="_blank">Nova Python</a></li>
+          <li><a href="http://www.meetup.com/Golang-DC/" target="_blank">Golang DC</a></li>
+        </ul>
+      </nav>
+      <ul class="social">
+        <li><a class="sc-You can add links in your config file" href="#" target="_blank"><i class="fa fa-You can add links in your config file"></i></a></li>
+        <li><a class="sc-Another social link" href="#" target="_blank"><i class="fa fa-Another social link"></i></a></li>
+      </ul>
+    </div>
+  </aside>
+  <main>
+
+<article>
+  <header>
+    <h1 id="gnuradio-raspberry-pi">GNURadio Raspberry Pi</h1>
+    <p>Posted on Thu 20 August 2015 in <a href="/category/gnuradio-raspberrypi.html">gnuradio raspberrypi</a></p>
+  </header>
+  <div>
+    <p>On the Raspberry PI 2, install some required components</p>
+<div class="highlight"><pre>sudo apt-get install libuhd-dev
+sudo apt-get install libboost-dev
+# prolly qt and gnuradio as well
+</pre></div>
+<p>See github for example project that now works, written in PySide. Also example
+code written in C++. Now to improve the workflow with a xcompiler. Maybe
+a new article?</p>
+<p>Setup cross compiler and libraries</p>
+<div class="highlight"><pre>mount sshfs
+sudo ln -s /home/rday/Development/raspberrypi/mntrpi/lib/arm-linux-gnueabihf/ /lib/arm-linux-gnueabihf
+sudo ln -s /home/rday/Development/raspberrypi/mntrpi/usr/lib/arm-linux-gnueabihf/ /usr/lib/arm-linux-gnueabihf
+cp -R /usr/share/qt4/mkspecs/linux-arm-gnueabi-g++ ./mkspec
+# Update with changes
+qmake -spec mkspec/
+make
+</pre></div>
+
+  </div>
+  <div class="tag-cloud">
+    <p>
+    </p>
+  </div>
+</article>
+
+    <footer>
+      <p>&copy; Ryan Day </p>
+<p>Built using <a href="http://getpelican.com" target="_blank">Pelican</a> - <a href="https://github.com/alexandrevicenzi/flex" target="_blank">Flex</a> theme by <a href="http://alexandrevicenzi.com" target="_blank">Alexandre Vicenzi</a></p>    </footer>
+  </main>
+<script type="application/ld+json">
+{
+  "@context": "http://schema.org",
+  "@type": "BlogPosting",
+  "name": "GNURadio Raspberry Pi",
+  "headline": "GNURadio Raspberry Pi",
+  "datePublished": "2015-08-20 19:45:00-04:00",
+  "dateModified": "",
+  "author": {
+    "@type": "Person",
+    "name": "ryanday",
+    "url": "/author/ryanday.html"
+  },
+  "image": "https://avatars3.githubusercontent.com/u/6845642?v=3&s=200",
+  "url": "/gnuradio-raspberry-pi.html",
+  "description": "Get GNURadio running on a Raspberry Pi2"
+}
+</script></body>
+</html>
