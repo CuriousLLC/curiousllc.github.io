@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Working with hardware</title><link href="http://iot.curiousllc.com/" rel="alternate"></link><link href="http://iot.curiousllc.com/feeds/sqlalchemy-python.atom.xml" rel="self"></link><id>http://iot.curiousllc.com/</id><updated>2015-03-20T18:22:00-04:00</updated><entry><title>Examining SQLAlchemy Memory Usage</title><link href="http://iot.curiousllc.com/examining-sqlalchemy-memory-usage.html" rel="alternate"></link><updated>2015-03-20T18:22:00-04:00</updated><author><name>ryanday</name></author><id>tag:iot.curiousllc.com,2015-03-20:examining-sqlalchemy-memory-usage.html</id><summary type="html">&lt;p&gt;I started having segfaults in my celery processes. These were incredibly difficult to debug because they didn’t always happen, and never happened in development. Fortunately they were happening in certain places and I was able to guess where the problem was. However, I didn’t understand just how severe the problem was.&lt;/p&gt;
+&lt;p&gt;I use SQLAlchemy in my Flask apps. I typically issue queries similar to&lt;/p&gt;
+&lt;p&gt;query_result = db.session.query(MyModel).first()&lt;/p&gt;
+&lt;p&gt;I knew I was running out of memory on my entry level Digital Ocean droplets.
+That is when the segfaults started. I stumbled across &lt;a class="reference external" href="https://pypi.python.org/pypi/memory_profiler"&gt;Memory Profiler&lt;/a&gt; and
+created a quick test program to profile a single function that was causing problems.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;Line # Mem usage Increment Line Contents
+================================================
+56 46.0 MiB 0.0 MiB   @profile
+57                    def get_bounced_emails():
+58 48.2 MiB 2.2 MiB       emails = db.session.query(EmailAddress).\
+59 48.3 MiB 0.0 MiB           join(send_history, send_history.c.email_id == EmailAddress.email_id).\
+60 372.1 MiB 323.9 MiB        filter(send_history.c.bounce == 1).\
+61                            all()
+62
+63 372.1 MiB 0.0 MiB      email_dict = {}
+64 374.1 MiB 2.0 MiB      for email in emails:
+65 374.1 MiB 0.0 MiB          email_dict[email.email_address] = True
+66
+67 314.9 MiB -59.2 MiB    del emails
+68 314.9 MiB 0.0 MiB      return email_dict
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;The memory profiler package makes it real easy to see the memory consumption of your application line by line. In this function, we are just retrieving a ton of records. They are taking up a lot of memory.&lt;/p&gt;
+&lt;p&gt;This is where I learned a little bit about SQLAlchemy. This function only needs the email_address field of the record, but I’m retrieving the entire record. So I made a change to simply grab the email_address record.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;Line # Mem usage Increment Line Contents
+================================================
+56 46.0 MiB 0.0 MiB   @profile
+57                    def get_bounced_emails():
+58 47.1 MiB 1.1 MiB       emails = db.session.query(EmailAddress.email_address).\
+59 47.1 MiB 0.0 MiB           join(send_history, send_history.c.email_id == EmailAddress.email_id).\
+60 81.2 MiB 34.1 MiB          filter(send_history.c.bounce == 1).\
+61                            all()
+62
+63 81.2 MiB 0.0 MiB       email_dict = {}
+64 84.2 MiB 3.0 MiB       for email in emails:
+65 84.2 MiB 0.0 MiB           email_dict[email[0]] = True
+66
+67 65.9 MiB -18.2 MiB     del emails
+68 65.9 MiB 0.0 MiB       return email_dict
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Wow. By just grabbing that one field I seriously reduced the memory consumption of this method. I had under estimated just how much overhead there is in pulling the entire record in a query.&lt;/p&gt;
+&lt;p&gt;Now I take this into account when building queries. Just what do I need form the DB? Then I only grab that.&lt;/p&gt;
+</summary></entry></feed>
