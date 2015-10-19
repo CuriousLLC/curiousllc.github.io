@@ -1,5 +1,102 @@
 <?xml version="1.0" encoding="utf-8"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Working with hardware</title><link>http://iot.curiousllc.com/</link><description></description><atom:link href="http://iot.curiousllc.com/feeds/ryanday.rss.xml" rel="self"></atom:link><lastBuildDate>Fri, 20 Mar 2015 18:22:00 -0400</lastBuildDate><item><title>Examining SQLAlchemy Memory Usage</title><link>http://iot.curiousllc.com/examining-sqlalchemy-memory-usage.html</link><description>&lt;p&gt;I started having segfaults in my celery processes. These were incredibly difficult to debug because they didn’t always happen, and never happened in development. Fortunately they were happening in certain places and I was able to guess where the problem was. However, I didn’t understand just how severe the problem was.&lt;/p&gt;
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Working with hardware</title><link>http://projects.curiousllc.com/</link><description></description><atom:link href="http://projects.curiousllc.com/feeds/ryanday.rss.xml" rel="self"></atom:link><lastBuildDate>Tue, 28 Jul 2015 11:15:00 -0400</lastBuildDate><item><title>Flask in a Rump Kernel</title><link>http://projects.curiousllc.com/flask-in-a-rump-kernel.html</link><description>&lt;div class="section" id="rump-kernels"&gt;
+&lt;h2&gt;Rump Kernels&lt;/h2&gt;
+&lt;p&gt;&lt;a class="reference external" href="https://github.com/rumpkernel/wiki/wiki/Info:-FAQ#user-content-What_is_a_rump_kernel"&gt;Rump Kernels&lt;/a&gt; are better explained by the FAQ than myself, so I suggest checking
+that out. But essentially a &lt;em&gt;Rump Kernel&lt;/em&gt; is a kernel with everything but the bare
+essentials removed. Don't need a file system? Then don't bundle the file system
+drivers. So where do you get the drivers for a &lt;em&gt;Rump Kernel&lt;/em&gt;? &lt;em&gt;Anykernels&lt;/em&gt;!&lt;/p&gt;
+&lt;p&gt;The idea of an &lt;em&gt;Anykernel&lt;/em&gt; is that individual drivers can be taken and used in a Rump
+Kernel. NetBSD is an &lt;em&gt;Anykernel&lt;/em&gt;. What this means is that a &lt;em&gt;Rump Kernel&lt;/em&gt; can use the
+drivers directly from the NetBSD source tree. You don't need to build your own
+drivers to use a &lt;em&gt;Rump Kernel&lt;/em&gt;. You can use real-world tested drivers to build
+production ready &lt;em&gt;Unikernels&lt;/em&gt; (&lt;em&gt;wait... unikernels?&lt;/em&gt;).&lt;/p&gt;
+&lt;p&gt;A Unikernel is built with Rumprun. Rumprun takes your application, libc, the
+rumpkernel, and hypervisor layer, then builds the final product (unikernel) that
+will interact with things. The Unikernel is what you end up running in Xen or QEMU.&lt;/p&gt;
+&lt;p&gt;&lt;em&gt;So... Python remember?&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;Yes. A &lt;em&gt;Unikernel&lt;/em&gt; provides you with a &amp;quot;POSIX-y&amp;quot; environment to operate in. This lets
+most software run right out of the box. Which means we can probably get Python up
+and running without too much trouble.&lt;/p&gt;
+&lt;p&gt;In fact, Python already exists in the Rumprun &lt;a class="reference external" href="https://github.com/rumpkernel/rumprun-packages/tree/master/python"&gt;package system&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="section" id="the-python-package"&gt;
+&lt;h2&gt;The Python Package&lt;/h2&gt;
+&lt;p&gt;The Rumprun &lt;a class="reference external" href="https://github.com/rumpkernel/rumprun-packages"&gt;package system&lt;/a&gt; is similar to the BSD ports structure. A source
+distribution is specified and downloaded. Patches are applied to the source. Then
+everything is compiled into a &lt;em&gt;Unikernel&lt;/em&gt;.&lt;/p&gt;
+&lt;p&gt;In the case of Python there were a couple hurdles to overcome.&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;&lt;strong&gt;Cross Compilation&lt;/strong&gt;. The build-rr toolchain lets us build binaries for the Rump
+Kernel environment. The Python config scripts needs to have this cross compilation
+option made available.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Static builds&lt;/strong&gt;. Python needs to be compiled statically. We are creating a single,
+bootable, Unikernel. We can't rely on dynamic libraries being availble.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The Python package makes these cross compilation updates. It also modifies the
+&lt;strong&gt;Modules/Setup.dist&lt;/strong&gt; file to build several modules statically along with Python.&lt;/p&gt;
+&lt;p&gt;To build the Python package, &lt;a class="reference external" href="https://github.com/rumpkernel/wiki/wiki/Tutorial:-Getting-started#building"&gt;start here&lt;/a&gt;. I will assume that you have a working build environment for the rest of the tutorial.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;git clone git@github.com:rumpkernel/rumprun-packages.git
+cd python
+export PATH=/path/to/app-tools:$PATH
+make
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;You're going to see a lot of errors like this one:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;collect2: error: ld returned 1 exit status
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;But you will also end up with a Python ISO in the images/ directory. To test out
+your installation, please follow the directions in the README.md file. This will
+walk you through rumpbake and how to build the bootstrap Python script.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="section" id="running-flask"&gt;
+&lt;h2&gt;Running Flask&lt;/h2&gt;
+&lt;p&gt;You should have a Unikernel booting up and running the Python &amp;quot;Hello World&amp;quot; example
+at this point. Now our goal is to:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;Build a Python environment with the modules we need&lt;/li&gt;
+&lt;li&gt;Include that environment in our unikernel&lt;/li&gt;
+&lt;li&gt;Setup networking&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Building the Python environment is easy enough. Using the same version of Python as
+version as your Rumpkernel (probably 3.4.3) create a virtual environment and install
+any packages you'd like. In this case we're just installing Flask.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;pyvenv-3.4 helloworld-env
+source helloworld-env/bin/activate
+pip install flask
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;To include this environment we can build an ISO, just like we did for the static Python
+build.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;genisoimage -r -o py3env.iso helloworld-env/lib/python3.4/site-packages
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Setting up networking requires us to creat a TAP device. This will let the kernel pass
+us all the traffic we need. We'll setup 10.0.120.100, and then our Unikernel will
+listen on 10.0.120.101.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;sudo ip tuntap add tap0 mode tap
+sudo ip addr add 10.0.120.100/24 dev tap0
+sudo ip link set dev tap0 up
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Finally, the script to start the Unikernel&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;#!/bin/sh
+
+PATH=/home/rday/Development/os/rump/qemu/bin:$PATH:/home/rday/Development/os/rump/rumprun/app-tools
+
+cython --embed -v -3 -Werror main.py
+x86_64-rumprun-netbsd-gcc main.c \
+  -I../Python-3.4.3/pythondist/include/python3.4m \
+  -L../Python-3.4.3/pythondist/lib \
+  -lpython3.4m -lutil -lm -lz -lssl -lcrypto
+
+rumpbake hw_virtio a.bin a.out
+
+rumprun qemu -i \
+      -I if,vioif,&amp;#39;-net tap,ifname=tap0,script=no&amp;#39;\
+      -W if,inet,static,10.0.120.101/24 \
+      -b ../../python.iso,/python/lib/python3.4 \
+      -b ../../stubetc.iso,/etc \
+      -b py3env.iso,/python/lib/python3.4/site-packages \
+      -e PYTHONHOME=/python a.bin \
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/div&gt;
+</description><dc:creator xmlns:dc="http://purl.org/dc/elements/1.1/">ryanday</dc:creator><pubDate>Tue, 28 Jul 2015 11:15:00 -0400</pubDate><guid>tag:projects.curiousllc.com,2015-07-28:flask-in-a-rump-kernel.html</guid></item><item><title>Examining SQLAlchemy Memory Usage</title><link>http://projects.curiousllc.com/examining-sqlalchemy-memory-usage.html</link><description>&lt;p&gt;I started having segfaults in my celery processes. These were incredibly difficult to debug because they didn’t always happen, and never happened in development. Fortunately they were happening in certain places and I was able to guess where the problem was. However, I didn’t understand just how severe the problem was.&lt;/p&gt;
 &lt;p&gt;I use SQLAlchemy in my Flask apps. I typically issue queries similar to&lt;/p&gt;
 &lt;p&gt;query_result = db.session.query(MyModel).first()&lt;/p&gt;
 &lt;p&gt;I knew I was running out of memory on my entry level Digital Ocean droplets.
@@ -41,4 +138,4 @@ created a quick test program to profile a single function that was causing probl
 &lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;Wow. By just grabbing that one field I seriously reduced the memory consumption of this method. I had under estimated just how much overhead there is in pulling the entire record in a query.&lt;/p&gt;
 &lt;p&gt;Now I take this into account when building queries. Just what do I need form the DB? Then I only grab that.&lt;/p&gt;
-</description><dc:creator xmlns:dc="http://purl.org/dc/elements/1.1/">ryanday</dc:creator><pubDate>Fri, 20 Mar 2015 18:22:00 -0400</pubDate><guid>tag:iot.curiousllc.com,2015-03-20:examining-sqlalchemy-memory-usage.html</guid></item></channel></rss>
+</description><dc:creator xmlns:dc="http://purl.org/dc/elements/1.1/">ryanday</dc:creator><pubDate>Fri, 20 Mar 2015 18:22:00 -0400</pubDate><guid>tag:projects.curiousllc.com,2015-03-20:examining-sqlalchemy-memory-usage.html</guid></item></channel></rss>

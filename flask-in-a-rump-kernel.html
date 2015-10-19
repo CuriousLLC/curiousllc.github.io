@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link href='//fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,700,400italic' rel='stylesheet' type='text/css'>
+  <link rel="stylesheet" type="text/css" href="http://projects.curiousllc.com/theme/css/style.min.css">
+  <link rel="stylesheet" type="text/css" href="http://projects.curiousllc.com/theme/css/pygments.min.css">
+  <link rel="stylesheet" type="text/css" href="http://projects.curiousllc.com/theme/css/font-awesome.min.css">
+  <link href="http://projects.curiousllc.com/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="Working with hardware Atom">
+
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="" />
+<meta name="author" content="ryanday" />
+<meta name="description" content="Running Python on a Rump Kernel" />
+<meta name="keywords" content="">
+<meta property="og:site_name" content="Working with hardware"/>
+<meta property="og:title" content="Flask in a Rump Kernel"/>
+<meta property="og:description" content="Running Python on a Rump Kernel"/>
+<meta property="og:locale" content="en_US"/>
+<meta property="og:url" content="http://projects.curiousllc.com/flask-in-a-rump-kernel.html"/>
+<meta property="og:type" content="article"/>
+<meta property="article:published_time" content="2015-07-28 11:15:00-04:00"/>
+<meta property="article:modified_time" content=""/>
+<meta property="article:author" content="http://projects.curiousllc.com/author/ryanday.html">
+<meta property="article:section" content="rumpkernel python"/>
+<meta property="og:image" content="https://avatars3.githubusercontent.com/u/6845642?v=3&s=200">  <title>Working with hardware &ndash; Flask in a Rump Kernel</title>
+</head>
+<body>
+  <aside>
+    <div>
+      <a href="http://projects.curiousllc.com">
+        <img src="https://avatars3.githubusercontent.com/u/6845642?v=3&s=200" alt="" title="">
+      </a>
+      <h1><a href="http://projects.curiousllc.com"></a></h1>
+      <p></p>
+      <nav>
+        <ul class="list">
+          <li><a href="http://curiousllc.com/" target="_blank">Curious LLC</a></li>
+          <li><a href="http://www.meetup.com/NOVA-Python" target="_blank">Nova Python</a></li>
+          <li><a href="http://www.meetup.com/Golang-DC/" target="_blank">Golang DC</a></li>
+          <li><a href="mailto:info@curiousllc.com" target="_blank">info@curiousllc.com</a></li>
+        </ul>
+      </nav>
+      <ul class="social">
+        <li><a class="sc-You can add links in your config file" href="#" target="_blank"><i class="fa fa-You can add links in your config file"></i></a></li>
+        <li><a class="sc-Another social link" href="#" target="_blank"><i class="fa fa-Another social link"></i></a></li>
+      </ul>
+    </div>
+  </aside>
+  <main>
+
+<article>
+  <header>
+    <h1 id="flask-in-a-rump-kernel">Flask in a Rump Kernel</h1>
+    <p>Posted on Tue 28 July 2015 in <a href="http://projects.curiousllc.com/category/rumpkernel-python.html">rumpkernel python</a> by ryanday</p>
+  </header>
+  <div>
+    <div class="section" id="rump-kernels">
+<h2>Rump Kernels</h2>
+<p><a class="reference external" href="https://github.com/rumpkernel/wiki/wiki/Info:-FAQ#user-content-What_is_a_rump_kernel">Rump Kernels</a> are better explained by the FAQ than myself, so I suggest checking
+that out. But essentially a <em>Rump Kernel</em> is a kernel with everything but the bare
+essentials removed. Don't need a file system? Then don't bundle the file system
+drivers. So where do you get the drivers for a <em>Rump Kernel</em>? <em>Anykernels</em>!</p>
+<p>The idea of an <em>Anykernel</em> is that individual drivers can be taken and used in a Rump
+Kernel. NetBSD is an <em>Anykernel</em>. What this means is that a <em>Rump Kernel</em> can use the
+drivers directly from the NetBSD source tree. You don't need to build your own
+drivers to use a <em>Rump Kernel</em>. You can use real-world tested drivers to build
+production ready <em>Unikernels</em> (<em>wait... unikernels?</em>).</p>
+<p>A Unikernel is built with Rumprun. Rumprun takes your application, libc, the
+rumpkernel, and hypervisor layer, then builds the final product (unikernel) that
+will interact with things. The Unikernel is what you end up running in Xen or QEMU.</p>
+<p><em>So... Python remember?</em></p>
+<p>Yes. A <em>Unikernel</em> provides you with a &quot;POSIX-y&quot; environment to operate in. This lets
+most software run right out of the box. Which means we can probably get Python up
+and running without too much trouble.</p>
+<p>In fact, Python already exists in the Rumprun <a class="reference external" href="https://github.com/rumpkernel/rumprun-packages/tree/master/python">package system</a>.</p>
+</div>
+<div class="section" id="the-python-package">
+<h2>The Python Package</h2>
+<p>The Rumprun <a class="reference external" href="https://github.com/rumpkernel/rumprun-packages">package system</a> is similar to the BSD ports structure. A source
+distribution is specified and downloaded. Patches are applied to the source. Then
+everything is compiled into a <em>Unikernel</em>.</p>
+<p>In the case of Python there were a couple hurdles to overcome.</p>
+<ul class="simple">
+<li><strong>Cross Compilation</strong>. The build-rr toolchain lets us build binaries for the Rump
+Kernel environment. The Python config scripts needs to have this cross compilation
+option made available.</li>
+<li><strong>Static builds</strong>. Python needs to be compiled statically. We are creating a single,
+bootable, Unikernel. We can't rely on dynamic libraries being availble.</li>
+</ul>
+<p>The Python package makes these cross compilation updates. It also modifies the
+<strong>Modules/Setup.dist</strong> file to build several modules statically along with Python.</p>
+<p>To build the Python package, <a class="reference external" href="https://github.com/rumpkernel/wiki/wiki/Tutorial:-Getting-started#building">start here</a>. I will assume that you have a working build environment for the rest of the tutorial.</p>
+<div class="highlight"><pre>git clone git@github.com:rumpkernel/rumprun-packages.git
+cd python
+export PATH=/path/to/app-tools:$PATH
+make
+</pre></div>
+<p>You're going to see a lot of errors like this one:</p>
+<div class="highlight"><pre>collect2: error: ld returned 1 exit status
+</pre></div>
+<p>But you will also end up with a Python ISO in the images/ directory. To test out
+your installation, please follow the directions in the README.md file. This will
+walk you through rumpbake and how to build the bootstrap Python script.</p>
+</div>
+<div class="section" id="running-flask">
+<h2>Running Flask</h2>
+<p>You should have a Unikernel booting up and running the Python &quot;Hello World&quot; example
+at this point. Now our goal is to:</p>
+<ul class="simple">
+<li>Build a Python environment with the modules we need</li>
+<li>Include that environment in our unikernel</li>
+<li>Setup networking</li>
+</ul>
+<p>Building the Python environment is easy enough. Using the same version of Python as
+version as your Rumpkernel (probably 3.4.3) create a virtual environment and install
+any packages you'd like. In this case we're just installing Flask.</p>
+<div class="highlight"><pre>pyvenv-3.4 helloworld-env
+source helloworld-env/bin/activate
+pip install flask
+</pre></div>
+<p>To include this environment we can build an ISO, just like we did for the static Python
+build.</p>
+<div class="highlight"><pre>genisoimage -r -o py3env.iso helloworld-env/lib/python3.4/site-packages
+</pre></div>
+<p>Setting up networking requires us to creat a TAP device. This will let the kernel pass
+us all the traffic we need. We'll setup 10.0.120.100, and then our Unikernel will
+listen on 10.0.120.101.</p>
+<div class="highlight"><pre>sudo ip tuntap add tap0 mode tap
+sudo ip addr add 10.0.120.100/24 dev tap0
+sudo ip link set dev tap0 up
+</pre></div>
+<p>Finally, the script to start the Unikernel</p>
+<div class="highlight"><pre>#!/bin/sh
+
+PATH=/home/rday/Development/os/rump/qemu/bin:$PATH:/home/rday/Development/os/rump/rumprun/app-tools
+
+cython --embed -v -3 -Werror main.py
+x86_64-rumprun-netbsd-gcc main.c \
+  -I../Python-3.4.3/pythondist/include/python3.4m \
+  -L../Python-3.4.3/pythondist/lib \
+  -lpython3.4m -lutil -lm -lz -lssl -lcrypto
+
+rumpbake hw_virtio a.bin a.out
+
+rumprun qemu -i \
+      -I if,vioif,&#39;-net tap,ifname=tap0,script=no&#39;\
+      -W if,inet,static,10.0.120.101/24 \
+      -b ../../python.iso,/python/lib/python3.4 \
+      -b ../../stubetc.iso,/etc \
+      -b py3env.iso,/python/lib/python3.4/site-packages \
+      -e PYTHONHOME=/python a.bin \
+</pre></div>
+</div>
+
+  </div>
+  <div class="tag-cloud">
+    <p>
+    </p>
+  </div>
+</article>
+
+    <footer>
+      <p>&copy; Ryan Day </p>
+<p>Built using <a href="http://getpelican.com" target="_blank">Pelican</a> - <a href="https://github.com/alexandrevicenzi/flex" target="_blank">Flex</a> theme by <a href="http://alexandrevicenzi.com" target="_blank">Alexandre Vicenzi</a></p>    </footer>
+  </main>
+<script type="application/ld+json">
+{
+  "@context": "http://schema.org",
+  "@type": "BlogPosting",
+  "name": "Flask in a Rump Kernel",
+  "headline": "Flask in a Rump Kernel",
+  "datePublished": "2015-07-28 11:15:00-04:00",
+  "dateModified": "",
+  "author": {
+    "@type": "Person",
+    "name": "ryanday",
+    "url": "http://projects.curiousllc.com/author/ryanday.html"
+  },
+  "image": "https://avatars3.githubusercontent.com/u/6845642?v=3&s=200",
+  "url": "http://projects.curiousllc.com/flask-in-a-rump-kernel.html",
+  "description": "Running Python on a Rump Kernel"
+}
+</script></body>
+</html>
