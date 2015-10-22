@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link href='//fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,700,400italic' rel='stylesheet' type='text/css'>
+  <link rel="stylesheet" type="text/css" href="http://projects.curiousllc.com/theme/css/style.min.css">
+  <link rel="stylesheet" type="text/css" href="http://projects.curiousllc.com/theme/css/pygments.min.css">
+  <link rel="stylesheet" type="text/css" href="http://projects.curiousllc.com/theme/css/font-awesome.min.css">
+  <link href="http://projects.curiousllc.com/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="Working with hardware Atom">
+
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="" />
+<meta name="author" content="ryanday" />
+<meta name="description" content="Test driven API integration" />
+<meta name="keywords" content="">
+<meta property="og:site_name" content="Working with hardware"/>
+<meta property="og:title" content="Test driven API integration with Go"/>
+<meta property="og:description" content="Test driven API integration"/>
+<meta property="og:locale" content="en_US"/>
+<meta property="og:url" content="http://projects.curiousllc.com/test-driven-api-integration-with-go.html"/>
+<meta property="og:type" content="article"/>
+<meta property="article:published_time" content="2015-05-25 20:05:00-04:00"/>
+<meta property="article:modified_time" content=""/>
+<meta property="article:author" content="http://projects.curiousllc.com/author/ryanday.html">
+<meta property="article:section" content="tdd golang"/>
+<meta property="og:image" content="https://avatars3.githubusercontent.com/u/6845642?v=3&s=200">  <title>Working with hardware &ndash; Test driven API integration with Go</title>
+</head>
+<body>
+  <aside>
+    <div>
+      <a href="http://projects.curiousllc.com">
+        <img src="https://avatars3.githubusercontent.com/u/6845642?v=3&s=200" alt="" title="">
+      </a>
+      <h1><a href="http://projects.curiousllc.com"></a></h1>
+      <p></p>
+      <nav>
+        <ul class="list">
+          <li><a href="http://curiousllc.com/" target="_blank">Curious LLC</a></li>
+          <li><a href="http://www.meetup.com/NOVA-Python" target="_blank">Nova Python</a></li>
+          <li><a href="http://www.meetup.com/Golang-DC/" target="_blank">Golang DC</a></li>
+          <li><a href="mailto:info@curiousllc.com" target="_blank">info@curiousllc.com</a></li>
+        </ul>
+      </nav>
+      <ul class="social">
+        <li><a class="sc-You can add links in your config file" href="#" target="_blank"><i class="fa fa-You can add links in your config file"></i></a></li>
+        <li><a class="sc-Another social link" href="#" target="_blank"><i class="fa fa-Another social link"></i></a></li>
+      </ul>
+    </div>
+  </aside>
+  <main>
+
+<article>
+  <header>
+    <h1 id="test-driven-api-integration-with-go">Test driven API integration with Go</h1>
+    <p>Posted on Mon 25 May 2015 in <a href="http://projects.curiousllc.com/category/tdd-golang.html">tdd golang</a> by <a href="http://projects.curiousllc.com/author/ryanday.html">ryanday</a></p>
+  </header>
+  <div>
+    <p>Test Driven design is more than simply testing individual functions before you write then. There are several components of your API client that you want to address:</p>
+<ul class="simple">
+<li>How the workflow will appear from a user's perspective.</li>
+<li>How the API meta control will work (pages, a cursor, offset/limit, authenticate, this sort of thing).</li>
+<li>How the backend API developers will shake their heads as you call the same method over and over during testing.</li>
+</ul>
+<p>We want to find a testing method that solves all these concerns. We should verify our core functionality is working. Then we can play with the user's workflow and test out different ideas without breaking that functionality. We can implement caching, iterating large data, or pieces of data, on top of the API after the tests are complete. Having the tests in place gives us the freedom to experiment.</p>
+<p>As always, let's check out Github to see how others are testing their client side APIs. There are lots of examples of course, but the common methods boil down to:</p>
+<ul class="simple">
+<li>Use a key and the live API (<a class="reference external" href="https://github.com/ChimeraCoder/anaconda/blob/master/twitter_test.go">twitter</a>)</li>
+<li>Don't test the actual calls, just the response handling (<a class="reference external" href="https://github.com/facebookgo/fbapi">facebook</a>)</li>
+<li>Mock very short responses to test calls (<a class="reference external" href="https://github.com/MariaTerzieva/gotumblr/blob/master/gotumblr_test.go">tumblr</a>, <a class="reference external" href="https://github.com/masci/flickr/blob/master/testutils.go">flikr</a>)</li>
+<li>Use a mix of mocks and live (<a class="reference external" href="https://github.com/google/go-github/tree/master/tests">google github</a>)</li>
+</ul>
+<p>Each of these examples is worth taking a look at. Of these, Google's seems the most complete. Their test setup creates a global Mux and httptest.Server for that Mux. Each unit test attaches a handler to the Mux. They also have live tests that don't run in their CI. These are specifically to test whether server side functionality has changed.</p>
+<p><strong>Mocking the calls</strong></p>
+<p>Really, we want to test the API as the user would consume it. We don't want to simply test all the little pieces and assume a nice workflow. So we need to write a test like the user would write their code.</p>
+<div class="highlight"><pre>api := CreateNewApi(&amp;client)
+
+controlChan := make(chan bool)
+responseChan, _ := api.SomeMethod(controlChan)
+</pre></div>
+<p>CreateNewApi() most likely has us speaking with the actual API server. The API url is hardcoded in the library somewhere. So our test will probably hit the live server. Using the live API for testing violates my third concern. Fortunately we can rewrite the client's transport method to point to a test server. We do this with http.RoundTripper.</p>
+<div class="highlight"><pre>type RewriteTransport struct {
+        Transport http.RoundTripper
+        URL       *url.URL
+}
+
+func (t RewriteTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+        // note that url.URL.ResolveReference doesn&#39;t work here
+        // since t.u is an absolute url
+        req.URL.Scheme = t.URL.Scheme
+        req.URL.Host = t.URL.Host
+        req.URL.Path = path.Join(t.URL.Path, req.URL.Path)
+        rt := t.Transport
+        if rt == nil {
+                rt = http.DefaultTransport
+        }
+        return rt.RoundTrip(req)
+}
+
+client := &amp;http.Client{
+        Transport: RewriteTransport{
+                URL: testUrl,
+        },
+}
+</pre></div>
+<p><strong>Minimal response test</strong></p>
+<p>With the custom transport, we are able to implement handlers for our tests. These handlers can return minimal expected responses. Take Flickr for example:</p>
+<div class="highlight"><pre>// https://github.com/masci/flickr/blob/master/response_test.go
+func TestExtra(t *testing.T) {
+        bodyStr := `&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot; ?&gt;
+                &lt;rsp stat=&quot;ok&quot;&gt;
+                        &lt;user id=&quot;23148015@N00&quot;&gt;
+                        &lt;username&gt;Massimiliano Pippi&lt;/username&gt;
+                        &lt;/user&gt;
+                        &lt;brands&gt;
+                          &lt;brand id=&quot;apple&quot;&gt;Apple&lt;/brand&gt;
+                        &lt;/brands&gt;
+                &lt;/rsp&gt;`
+
+        flickrResp := &amp;BasicResponse{}
+
+        response := &amp;http.Response{}    // HL
+        response.Body = NewFakeBody(bodyStr)    // HL
+        err := parseApiResponse(response, flickrResp)   // HL
+        Expect(t, err, nil)
+        Expect(t, flickrResp.Extra != &quot;&quot;, true)
+}
+</pre></div>
+<p>Flickr uses a transport rewrite to provide a minimal response to test. This gets us away from using the live API to test data. But the method being testing is parseApiResponse(). This isn't how the user will implement the API.</p>
+<p>This Tumblr API uses the same minimal response method. It also tests functions in the same way a user would call them.</p>
+<div class="highlight"><pre>// https://github.com/MariaTerzieva/gotumblr/blob/master/gotumblr_test.go
+func TestFollowing(t *testing.T) {
+        setup()
+        defer teardown()
+
+        handleFunc(&quot;/v2/user/following&quot;, &quot;GET&quot;, `{&quot;response&quot;: {&quot;total_blogs&quot;: 1}}`, map[string]string{}, t)
+
+        following := client.Following(map[string]string{}).Total_blogs
+        want := int64(1)
+        if following != want {
+                t.Errorf(&quot;Following returned %+v, want %v&quot;, following, want)
+        }
+}
+</pre></div>
+<p><strong>Hosting test data</strong></p>
+<p>This is a method I've been using that I haven't seen in the wild. It takes advantage of all the API consoles out there. You make a call using the provider's API console in a sandbox, and copy the (usually) JSON response into your test_data/ directory. Then simply serve the appropriate JSON file during the test.</p>
+<p>Using a recent integration for the Lingotek API, here is an example directory structure:</p>
+<div class="highlight"><pre>src/
+  lingotek/
+    test_data/
+      projects_full.json
+      projects_three.json
+</pre></div>
+<p>These two json files contain a full API response, including headers, offset/limit/total counts, and other meta information. In our mock handler, we can control which of those files is served based on query parameters.</p>
+<p>To begin, we have a function which takes a channel for returning a *http.Request, and a function which returns the name of the file which contains our appropriate response.</p>
+<div class="highlight"><pre>func createTestServer(requestChan chan *http.Request, getFileName func(*http.Request) string) httptest.Server, http.Client) {
+        handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+                var testData io.Reader
+                var err error
+
+                // getFileName will determine which response to load based on the request
+                testData, err = os.Open(getFileName(r))
+                if err != nil {
+                        http.NotFound(w, r)
+                        return
+                }
+
+                io.Copy(w, testData)
+
+                requestChan &lt;- r
+        })
+
+        server := httptest.NewServer(handler)
+        testUrl, _ := url.Parse(server.URL)
+
+        client := http.Client{
+                Transport: RewriteTransport{
+                        URL: testUrl,
+                },
+        }
+
+        // Return our test server and a client which points to it
+        return server, client
+}
+</pre></div>
+<p>Using this test server and client, we write a test like this:</p>
+<div class="highlight"><pre>func TestGetProjects(t *testing.T) {
+
+        // This is a simple handler, we always return the same response file
+        f := func(r *http.Request) string {
+                return &quot;test_data/projects_full.json&quot;
+        }
+
+        rCh := make(chan *http.Request, 1)
+        server, client := createTestServer(rCh, f)
+        defer server.Close()
+        defer close(rCh)
+
+        api := NewApi(&quot;dummyToken&quot;, &amp;client)
+        resp, err := api.GetProjectsPage(0, 10)
+        if err != nil {
+                t.Error(err)
+        }
+
+        if len(resp) != 10 {
+                t.Errorf(&quot;Expected 10 projects, got %d\n&quot;, len(resp))
+        }
+}
+</pre></div>
+<p>But we can get more complex. Let's say we want to test our ListProject function. ListProject() returns a channel that the caller can iterate over. Since the ListProject API method only returns 10 objects at a time, our method must make the call again at a new offset. Then the method must send the new objects to the channel.</p>
+<p>Our mockHandler function has inspect the request, and send a different response for the different offset.</p>
+<div class="highlight"><pre>mockHandler := func(r *http.Request) (fileName string) {
+        offset := r.URL.Query().Get(&quot;offset&quot;)
+
+        // If our client requested the next page,
+        // send a different json response
+        if offset == &quot;10&quot; {
+                fileName = &quot;test_data/projects_three.json&quot;
+        } else {
+                fileName = &quot;test_data/projects_full.json&quot;
+        }
+
+        return
+}
+
+/* . . . */
+doneChan := make(chan bool)
+projectChan, _ := api.ListProjects(doneChan)
+
+cNum := 0
+for _ = range projectChan {
+        cNum += 1
+}
+
+if cNum != 13 {
+        t.Errorf(&quot;Expected 13 projects, got %d&quot;, cNum)
+}
+</pre></div>
+<p>This test verifies that we can iterate over a channel while the API method is making multiple calls to the backend.</p>
+<p>Full source is on <a class="reference external" href="https://github.com/CuriousLLC/Lingotek">Github</a>.</p>
+
+  </div>
+  <div class="tag-cloud">
+    <p>
+    </p>
+  </div>
+</article>
+
+    <footer>
+      <p>&copy; Ryan Day </p>
+<p>Built using <a href="http://getpelican.com" target="_blank">Pelican</a> - <a href="https://github.com/alexandrevicenzi/flex" target="_blank">Flex</a> theme by <a href="http://alexandrevicenzi.com" target="_blank">Alexandre Vicenzi</a></p>    </footer>
+  </main>
+<script type="application/ld+json">
+{
+  "@context": "http://schema.org",
+  "@type": "BlogPosting",
+  "name": "Test driven API integration with Go",
+  "headline": "Test driven API integration with Go",
+  "datePublished": "2015-05-25 20:05:00-04:00",
+  "dateModified": "",
+  "author": {
+    "@type": "Person",
+    "name": "ryanday",
+    "url": "http://projects.curiousllc.com/author/ryanday.html"
+  },
+  "image": "https://avatars3.githubusercontent.com/u/6845642?v=3&s=200",
+  "url": "http://projects.curiousllc.com/test-driven-api-integration-with-go.html",
+  "description": "Test driven API integration"
+}
+</script></body>
+</html>
