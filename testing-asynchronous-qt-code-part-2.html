@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link href='//fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,700,400italic' rel='stylesheet' type='text/css'>
+  <link rel="stylesheet" type="text/css" href="http://projects.curiousllc.com/theme/css/style.min.css">
+  <link rel="stylesheet" type="text/css" href="http://projects.curiousllc.com/theme/css/pygments.min.css">
+  <link rel="stylesheet" type="text/css" href="http://projects.curiousllc.com/theme/css/font-awesome.min.css">
+  <link href="http://projects.curiousllc.com/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="Working with hardware Atom">
+
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="" />
+<meta name="author" content="Ryan Day" />
+<meta name="description" content="Test your asynchronous code" />
+<meta name="keywords" content="">
+<meta property="og:site_name" content="Working with hardware"/>
+<meta property="og:title" content="Testing Asynchronous Qt Code (part 2)"/>
+<meta property="og:description" content="Test your asynchronous code"/>
+<meta property="og:locale" content="en_US"/>
+<meta property="og:url" content="http://projects.curiousllc.com/testing-asynchronous-qt-code-part-2.html"/>
+<meta property="og:type" content="article"/>
+<meta property="article:published_time" content="2015-07-03 15:25:00-04:00"/>
+<meta property="article:modified_time" content=""/>
+<meta property="article:author" content="http://projects.curiousllc.com/author/ryan-day.html">
+<meta property="article:section" content="testing qt"/>
+<meta property="og:image" content="https://avatars3.githubusercontent.com/u/6845642?v=3&s=200">  <title>Working with hardware &ndash; Testing Asynchronous Qt Code (part 2)</title>
+</head>
+<body>
+  <aside>
+    <div>
+      <a href="http://projects.curiousllc.com">
+        <img src="https://avatars3.githubusercontent.com/u/6845642?v=3&s=200" alt="" title="">
+      </a>
+      <h1><a href="http://projects.curiousllc.com"></a></h1>
+      <p></p>
+      <nav>
+        <ul class="list">
+          <li><a href="http://curiousllc.com/" target="_blank">Curious LLC</a></li>
+          <li><a href="http://www.meetup.com/NOVA-Python" target="_blank">Nova Python</a></li>
+          <li><a href="http://www.meetup.com/Golang-DC/" target="_blank">Golang DC</a></li>
+          <li><a href="mailto:info@curiousllc.com" target="_blank">info@curiousllc.com</a></li>
+        </ul>
+      </nav>
+      <ul class="social">
+        <li><a class="sc-You can add links in your config file" href="#" target="_blank"><i class="fa fa-You can add links in your config file"></i></a></li>
+        <li><a class="sc-Another social link" href="#" target="_blank"><i class="fa fa-Another social link"></i></a></li>
+      </ul>
+    </div>
+  </aside>
+  <main>
+
+<article>
+  <header>
+    <h1 id="testing-asynchronous-qt-code-part-2">Testing Asynchronous Qt Code (part 2)</h1>
+    <p>Posted on Fri 03 July 2015 in <a href="http://projects.curiousllc.com/category/testing-qt.html">testing qt</a> by <a href="http://projects.curiousllc.com/author/ryan-day.html">Ryan Day</a></p>
+  </header>
+  <div>
+    <p>In <a class="reference external" href="http://projects.curiousllc.com/testing-asynchronous-qt-code-part-1.html">part 1</a> of this post, we talked about Qt Connection Types and how it is important to understand these connection types when dealing with multiple threads. We're still using the same <a class="reference external" href="https://github.com/CuriousLLC/QtTestMethods">repo on Github</a> with examples of a multi threaded GUI written with <a class="reference external" href="https://pypi.python.org/pypi/PySide/1.2.2">PySide</a> (a Python Qt library).</p>
+<p>But in this post we will try to <strong>uncover race conditions</strong>.</p>
+<p>To get started, this tricky situation lies in this unit test. Using what we know about signal connection types, we know that there will be two events that must be processed after our button clicks.</p>
+<div class="highlight"><pre><span class="k">def</span> <span class="nf">testRestoreList</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">main_window</span><span class="o">.</span><span class="n">name_text</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="s">&#39;Ryan&#39;</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">main_window</span><span class="o">.</span><span class="n">submit_button</span><span class="o">.</span><span class="n">click</span><span class="p">()</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">main_window</span><span class="o">.</span><span class="n">name_text</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="s">&#39;Meg&#39;</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">main_window</span><span class="o">.</span><span class="n">submit_button</span><span class="o">.</span><span class="n">click</span><span class="p">()</span>
+
+    <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">main_window</span><span class="o">.</span><span class="n">names_list</span><span class="o">.</span><span class="n">count</span><span class="p">()</span> <span class="o">==</span> <span class="mi">2</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">main_window</span><span class="o">.</span><span class="n">clear_list_button</span><span class="o">.</span><span class="n">click</span><span class="p">()</span>
+    <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">main_window</span><span class="o">.</span><span class="n">names_list</span><span class="o">.</span><span class="n">count</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">main_window</span><span class="o">.</span><span class="n">restore_list_button</span><span class="o">.</span><span class="n">click</span><span class="p">()</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">processEvents</span><span class="p">()</span>        <span class="c"># Process the store_name queued event</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">processEvents</span><span class="p">()</span>        <span class="c"># Process the get_all_names queued event</span>
+
+    <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">main_window</span><span class="o">.</span><span class="n">names_list</span><span class="o">.</span><span class="n">count</span><span class="p">()</span> <span class="o">==</span> <span class="mi">2</span>
+</pre></div>
+<p>This test will always run correctly. But there is still a race condition! Let's go into the <em>names_manager.store_name</em> and add a <em>QThread.sleep(1)</em>. This will simulate some delay between the signal and the actual storage of the name in whatever data store we would normally be using.</p>
+<p>The test now fails. It fails because the <em>Qthread.sleep(1)</em> prevents us from writing the names to our data store before our test calls the <em>get_all_names</em> signal (after the restore_list_button click). This means we have to rely on our <em>wait_for</em> function to make sure our test is reliable.</p>
+<div class="highlight"><pre><span class="k">def</span> <span class="nf">testRestoreList</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">main_window</span><span class="o">.</span><span class="n">name_text</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="s">&#39;Ryan&#39;</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">main_window</span><span class="o">.</span><span class="n">submit_button</span><span class="o">.</span><span class="n">click</span><span class="p">()</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">main_window</span><span class="o">.</span><span class="n">name_text</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="s">&#39;Meg&#39;</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">main_window</span><span class="o">.</span><span class="n">submit_button</span><span class="o">.</span><span class="n">click</span><span class="p">()</span>
+
+    <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">main_window</span><span class="o">.</span><span class="n">names_list</span><span class="o">.</span><span class="n">count</span><span class="p">()</span> <span class="o">==</span> <span class="mi">2</span>
+    <span class="k">assert</span> <span class="n">wait_for</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">main_window</span><span class="o">.</span><span class="n">name_manager</span><span class="o">.</span><span class="n">names</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="ow">is</span> <span class="bp">True</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">main_window</span><span class="o">.</span><span class="n">clear_list_button</span><span class="o">.</span><span class="n">click</span><span class="p">()</span>
+    <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">main_window</span><span class="o">.</span><span class="n">names_list</span><span class="o">.</span><span class="n">count</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">main_window</span><span class="o">.</span><span class="n">restore_list_button</span><span class="o">.</span><span class="n">click</span><span class="p">()</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">processEvents</span><span class="p">()</span>        <span class="c"># Process the store_name queued event</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">processEvents</span><span class="p">()</span>        <span class="c"># Process the get_all_names queued event</span>
+
+    <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">main_window</span><span class="o">.</span><span class="n">names_list</span><span class="o">.</span><span class="n">count</span><span class="p">()</span> <span class="o">==</span> <span class="mi">2</span>
+</pre></div>
+<p>We didn't add the <em>wait_for</em> to the bottom of the test though! That isn't the important part. What we need to do is be sure we wrote to our data store <strong>before</strong> we try to restore our names_list. That is why we add the <em>wait_for</em> function where we do.</p>
+<p><strong>QThread.sleep</strong></p>
+<p>Adding <em>QThread.sleep()</em> to your slots is a good way to verify that your tests are actually testing real world conditions in your application. Don't leave the <em>QThread.sleep()</em> in your slot of course! But when writing a new test, adding some fake delay to the slot will make sure that you aren't missing a race condition due the the nature of the test.</p>
+
+  </div>
+  <div class="tag-cloud">
+    <p>
+    </p>
+  </div>
+</article>
+
+    <footer>
+      <p>&copy; Ryan Day </p>
+<p>Built using <a href="http://getpelican.com" target="_blank">Pelican</a> - <a href="https://github.com/alexandrevicenzi/flex" target="_blank">Flex</a> theme by <a href="http://alexandrevicenzi.com" target="_blank">Alexandre Vicenzi</a></p>    </footer>
+  </main>
+<script type="application/ld+json">
+{
+  "@context": "http://schema.org",
+  "@type": "BlogPosting",
+  "name": "Testing Asynchronous Qt Code (part 2)",
+  "headline": "Testing Asynchronous Qt Code (part 2)",
+  "datePublished": "2015-07-03 15:25:00-04:00",
+  "dateModified": "",
+  "author": {
+    "@type": "Person",
+    "name": "Ryan Day",
+    "url": "http://projects.curiousllc.com/author/ryan-day.html"
+  },
+  "image": "https://avatars3.githubusercontent.com/u/6845642?v=3&s=200",
+  "url": "http://projects.curiousllc.com/testing-asynchronous-qt-code-part-2.html",
+  "description": "Test your asynchronous code"
+}
+</script></body>
+</html>
