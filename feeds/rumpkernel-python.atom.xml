@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Working with hardware</title><link href="http://projects.curiousllc.com/" rel="alternate"></link><link href="http://projects.curiousllc.com/feeds/rumpkernel-python.atom.xml" rel="self"></link><id>http://projects.curiousllc.com/</id><updated>2015-07-28T11:15:00-04:00</updated><entry><title>Flask in a Rump Kernel</title><link href="http://projects.curiousllc.com/flask-in-a-rump-kernel.html" rel="alternate"></link><updated>2015-07-28T11:15:00-04:00</updated><author><name>ryanday</name></author><id>tag:projects.curiousllc.com,2015-07-28:flask-in-a-rump-kernel.html</id><summary type="html">&lt;div class="section" id="rump-kernels"&gt;
+&lt;h2&gt;Rump Kernels&lt;/h2&gt;
+&lt;p&gt;&lt;a class="reference external" href="https://github.com/rumpkernel/wiki/wiki/Info:-FAQ#user-content-What_is_a_rump_kernel"&gt;Rump Kernels&lt;/a&gt; are better explained by the FAQ than myself, so I suggest reading
+through it. But essentially a &lt;strong&gt;Rump Kernel&lt;/strong&gt; is a kernel with everything but your bare
+essentials removed. Don't need a file system? Then don't bundle the file system
+drivers. What about the drivers you do need? You get them from an &lt;strong&gt;Anykernel&lt;/strong&gt;!&lt;/p&gt;
+&lt;p&gt;The idea of an &lt;strong&gt;Anykernel&lt;/strong&gt; is that individual drivers can be taken and used in a Rump
+Kernel. NetBSD is an Anykernel. What this means is that a Rump Kernel can use the
+drivers directly from the NetBSD source tree. You don't need to build your own drivers
+to use a Rump Kernel. You can use real-world drivers to build production ready
+&lt;strong&gt;Unikernels&lt;/strong&gt; (&lt;em&gt;wait... unikernels?&lt;/em&gt;).&lt;/p&gt;
+&lt;p&gt;At this time, a &lt;strong&gt;Unikernel&lt;/strong&gt; is built with a script called Rumprun. Rumprun takes your
+application, libc, the rumpkernel, and hypervisor layer, then builds the final product
+(unikernel) that will interact with things. The Unikernel is what you end up running in
+Xen or QEMU.&lt;/p&gt;
+&lt;p&gt;&lt;em&gt;So... back to Python remember?&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;Yes. A Unikernel provides you with a &amp;quot;POSIX-y&amp;quot; environment to operate in. This lets
+most software run right out of the box. Which means we can probably get Python up
+and running without too much trouble.&lt;/p&gt;
+&lt;p&gt;In fact, Python already exists in the Rumprun &lt;a class="reference external" href="https://github.com/rumpkernel/rumprun-packages/tree/master/python"&gt;package system&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="section" id="the-python-package"&gt;
+&lt;h2&gt;The Python Package&lt;/h2&gt;
+&lt;p&gt;The Rumprun &lt;a class="reference external" href="https://github.com/rumpkernel/rumprun-packages"&gt;package system&lt;/a&gt; is similar to the BSD ports structure. A source
+distribution is specified and downloaded. Patches are applied to the source. Then
+everything is compiled into a Unikernel.&lt;/p&gt;
+&lt;p&gt;In the case of Python there were a couple hurdles to overcome.&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;&lt;strong&gt;Cross Compilation&lt;/strong&gt;. The build-rr toolchain lets us build binaries for the Rump
+Kernel environment. The Python config scripts need to be patched in order to make
+this cross compilation option made available.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Static builds&lt;/strong&gt;. Python needs to be compiled statically. We are creating a single,
+bootable, Unikernel. We can't rely on dynamic libraries being availble at runtime.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The Python package makes these cross compilation updates. It also modifies the
+&lt;strong&gt;Modules/Setup.dist&lt;/strong&gt; file to build several modules statically along with Python.&lt;/p&gt;
+&lt;p&gt;To build the Python package you will need a working toolchain, &lt;a class="reference external" href="https://github.com/rumpkernel/wiki/wiki/Tutorial%3A-Building-Rumprun-Unikernels"&gt;start here&lt;/a&gt;. I will assume that you have a working build environment for the rest of the tutorial.&lt;/p&gt;
+&lt;p&gt;Now grab the rumprun packages repo, enter the python package, and start the build.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;git clone git@github.com:rumpkernel/rumprun-packages.git
+&lt;span class="nb"&gt;cd &lt;/span&gt;python
+&lt;span class="nb"&gt;export &lt;/span&gt;&lt;span class="nv"&gt;PATH&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;/path/to/app-tools:&lt;span class="nv"&gt;$PATH&lt;/span&gt;
+make
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;You're going to see a lot of errors like this one:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;collect2: error: ld returned 1 &lt;span class="nb"&gt;exit &lt;/span&gt;status
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;But you will also end up with a Python ISO in the images/ directory. To test out
+your Python package installation, please follow the directions in the &lt;a class="reference external" href="https://github.com/rumpkernel/rumprun-packages/tree/master/python"&gt;README.md&lt;/a&gt;
+file. This will walk you through rumpbake and how to build the bootstrap Python script.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="section" id="running-flask"&gt;
+&lt;h2&gt;Running Flask&lt;/h2&gt;
+&lt;p&gt;At this point, you should have a Unikernel booting up and running the Python &amp;quot;Hello World&amp;quot;
+example. Now our goal is to:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;Build a Python environment with the modules we need&lt;/li&gt;
+&lt;li&gt;Include that environment in our unikernel&lt;/li&gt;
+&lt;li&gt;Setup networking&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Building the Python environment is fairly straight forward. Using the same version of Python
+as your Unikernel (probably 3.4.3) create a virtual environment and install any packages
+you'd like available to your Unikernel. In this case we're just installing Flask.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;pyvenv-3.4 helloworld-env
+&lt;span class="nb"&gt;source &lt;/span&gt;helloworld-env/bin/activate
+pip install flask
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;To include this environment in the Unikernel, we want to build an ISO containing our site
+packages. We will end up mounting this ISO inside the Unikernel. Just like we did for
+the static Python build.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;genisoimage -r -o py3env.iso helloworld-env/lib/python3.4/site-packages
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Setting up networking requires us to create a TAP device. This will let the host machine
+pass traffic to our Unikernel. We'll setup 10.0.120.100, and then our Unikernel will
+listen on 10.0.120.101.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;sudo ip tuntap add tap0 mode tap
+sudo ip addr add 10.0.120.100/24 dev tap0
+sudo ip link &lt;span class="nb"&gt;set &lt;/span&gt;dev tap0 up
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;We will avoid doing anything special for our Flask application. Just a basic example will
+be enough for now.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="c"&gt;# main.py&lt;/span&gt;
+&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;flask&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;Flask&lt;/span&gt;
+&lt;span class="n"&gt;app&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;Flask&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;__name__&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+
+&lt;span class="nd"&gt;@app.route&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;/&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;hello&lt;/span&gt;&lt;span class="p"&gt;():&lt;/span&gt;
+    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;Hello World!&amp;quot;&lt;/span&gt;
+
+
+&lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="n"&gt;__name__&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;__main__&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+    &lt;span class="n"&gt;app&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;run&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;host&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;0.0.0.0&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Now we are able to start our Unikernel. The following script should be familiar. We are
+following the steps from the README.md file from earlier. However we also setup networking
+and mount our Python environment in the site-packages directory that our Unikernel sees.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="c"&gt;#!/bin/sh&lt;/span&gt;
+
+&lt;span class="nv"&gt;PATH&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;/home/rday/Development/os/rump/qemu/bin:&lt;span class="nv"&gt;$PATH&lt;/span&gt;:/home/rday/Development/os/rump/rumprun/app-tools
+
+cython --embed -v -3 -Werror main.py
+x86_64-rumprun-netbsd-gcc main.c &lt;span class="se"&gt;\&lt;/span&gt;
+  -I../Python-3.4.3/pythondist/include/python3.4m &lt;span class="se"&gt;\&lt;/span&gt;
+  -L../Python-3.4.3/pythondist/lib &lt;span class="se"&gt;\&lt;/span&gt;
+  -lpython3.4m -lutil -lm -lz -lssl -lcrypto
+
+rumpbake hw_virtio a.bin a.out
+
+rumprun qemu -i &lt;span class="se"&gt;\&lt;/span&gt;
+      -I &lt;span class="k"&gt;if&lt;/span&gt;,vioif,&lt;span class="s1"&gt;&amp;#39;-net tap,ifname=tap0,script=no&amp;#39;&lt;/span&gt;&lt;span class="se"&gt;\&lt;/span&gt;
+      -W &lt;span class="k"&gt;if&lt;/span&gt;,inet,static,10.0.120.101/24 &lt;span class="se"&gt;\&lt;/span&gt;
+      -b ../../python.iso,/python/lib/python3.4 &lt;span class="se"&gt;\&lt;/span&gt;
+      -b ../../stubetc.iso,/etc &lt;span class="se"&gt;\&lt;/span&gt;
+      -b py3env.iso,/python/lib/python3.4/site-packages &lt;span class="se"&gt;\&lt;/span&gt;
+      -e &lt;span class="nv"&gt;PYTHONHOME&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;/python a.bin &lt;span class="se"&gt;\&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Give it a shot. Run the script, and visit &lt;a class="reference external" href="http://10.0.120.101:5000"&gt;http://10.0.120.101:5000&lt;/a&gt;. You should get the
+&amp;quot;Hello World&amp;quot; message to pop up!&lt;/p&gt;
+&lt;/div&gt;
+</summary></entry></feed>

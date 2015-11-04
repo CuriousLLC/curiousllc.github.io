@@ -61,39 +61,39 @@
 <p>I knew I was running out of memory on my entry level Digital Ocean droplets.
 That is when the segfaults started. I stumbled across <a class="reference external" href="https://pypi.python.org/pypi/memory_profiler">Memory Profiler</a> and
 created a quick test program to profile a single function that was causing problems.</p>
-<div class="highlight"><pre>Line # Mem usage Increment Line Contents
-================================================
-56 46.0 MiB 0.0 MiB   @profile
-57                    def get_bounced_emails():
-58 48.2 MiB 2.2 MiB       emails = db.session.query(EmailAddress).\
-59 48.3 MiB 0.0 MiB           join(send_history, send_history.c.email_id == EmailAddress.email_id).\
-60 372.1 MiB 323.9 MiB        filter(send_history.c.bounce == 1).\
-61                            all()
-62
-63 372.1 MiB 0.0 MiB      email_dict = {}
-64 374.1 MiB 2.0 MiB      for email in emails:
-65 374.1 MiB 0.0 MiB          email_dict[email.email_address] = True
-66
-67 314.9 MiB -59.2 MiB    del emails
-68 314.9 MiB 0.0 MiB      return email_dict
+<div class="highlight"><pre><span class="n">Line</span> <span class="c"># Mem usage Increment Line Contents</span>
+<span class="o">================================================</span>
+<span class="mi">56</span> <span class="mf">46.0</span> <span class="n">MiB</span> <span class="mf">0.0</span> <span class="n">MiB</span>   <span class="nd">@profile</span>
+<span class="mi">57</span>                    <span class="k">def</span> <span class="nf">get_bounced_emails</span><span class="p">():</span>
+<span class="mi">58</span> <span class="mf">48.2</span> <span class="n">MiB</span> <span class="mf">2.2</span> <span class="n">MiB</span>       <span class="n">emails</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">EmailAddress</span><span class="p">)</span><span class="o">.</span>\
+<span class="mi">59</span> <span class="mf">48.3</span> <span class="n">MiB</span> <span class="mf">0.0</span> <span class="n">MiB</span>           <span class="n">join</span><span class="p">(</span><span class="n">send_history</span><span class="p">,</span> <span class="n">send_history</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">email_id</span> <span class="o">==</span> <span class="n">EmailAddress</span><span class="o">.</span><span class="n">email_id</span><span class="p">)</span><span class="o">.</span>\
+<span class="mi">60</span> <span class="mf">372.1</span> <span class="n">MiB</span> <span class="mf">323.9</span> <span class="n">MiB</span>        <span class="nb">filter</span><span class="p">(</span><span class="n">send_history</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">bounce</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span>\
+<span class="mi">61</span>                            <span class="nb">all</span><span class="p">()</span>
+<span class="mi">62</span>
+<span class="mi">63</span> <span class="mf">372.1</span> <span class="n">MiB</span> <span class="mf">0.0</span> <span class="n">MiB</span>      <span class="n">email_dict</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="mi">64</span> <span class="mf">374.1</span> <span class="n">MiB</span> <span class="mf">2.0</span> <span class="n">MiB</span>      <span class="k">for</span> <span class="n">email</span> <span class="ow">in</span> <span class="n">emails</span><span class="p">:</span>
+<span class="mi">65</span> <span class="mf">374.1</span> <span class="n">MiB</span> <span class="mf">0.0</span> <span class="n">MiB</span>          <span class="n">email_dict</span><span class="p">[</span><span class="n">email</span><span class="o">.</span><span class="n">email_address</span><span class="p">]</span> <span class="o">=</span> <span class="bp">True</span>
+<span class="mi">66</span>
+<span class="mi">67</span> <span class="mf">314.9</span> <span class="n">MiB</span> <span class="o">-</span><span class="mf">59.2</span> <span class="n">MiB</span>    <span class="k">del</span> <span class="n">emails</span>
+<span class="mi">68</span> <span class="mf">314.9</span> <span class="n">MiB</span> <span class="mf">0.0</span> <span class="n">MiB</span>      <span class="k">return</span> <span class="n">email_dict</span>
 </pre></div>
 <p>The memory profiler package makes it real easy to see the memory consumption of your application line by line. In this function, we are just retrieving a ton of records. They are taking up a lot of memory.</p>
 <p>This is where I learned a little bit about SQLAlchemy. This function only needs the email_address field of the record, but I’m retrieving the entire record. So I made a change to simply grab the email_address record.</p>
-<div class="highlight"><pre>Line # Mem usage Increment Line Contents
-================================================
-56 46.0 MiB 0.0 MiB   @profile
-57                    def get_bounced_emails():
-58 47.1 MiB 1.1 MiB       emails = db.session.query(EmailAddress.email_address).\
-59 47.1 MiB 0.0 MiB           join(send_history, send_history.c.email_id == EmailAddress.email_id).\
-60 81.2 MiB 34.1 MiB          filter(send_history.c.bounce == 1).\
-61                            all()
-62
-63 81.2 MiB 0.0 MiB       email_dict = {}
-64 84.2 MiB 3.0 MiB       for email in emails:
-65 84.2 MiB 0.0 MiB           email_dict[email[0]] = True
-66
-67 65.9 MiB -18.2 MiB     del emails
-68 65.9 MiB 0.0 MiB       return email_dict
+<div class="highlight"><pre><span class="n">Line</span> <span class="c"># Mem usage Increment Line Contents</span>
+<span class="o">================================================</span>
+<span class="mi">56</span> <span class="mf">46.0</span> <span class="n">MiB</span> <span class="mf">0.0</span> <span class="n">MiB</span>   <span class="nd">@profile</span>
+<span class="mi">57</span>                    <span class="k">def</span> <span class="nf">get_bounced_emails</span><span class="p">():</span>
+<span class="mi">58</span> <span class="mf">47.1</span> <span class="n">MiB</span> <span class="mf">1.1</span> <span class="n">MiB</span>       <span class="n">emails</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">EmailAddress</span><span class="o">.</span><span class="n">email_address</span><span class="p">)</span><span class="o">.</span>\
+<span class="mi">59</span> <span class="mf">47.1</span> <span class="n">MiB</span> <span class="mf">0.0</span> <span class="n">MiB</span>           <span class="n">join</span><span class="p">(</span><span class="n">send_history</span><span class="p">,</span> <span class="n">send_history</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">email_id</span> <span class="o">==</span> <span class="n">EmailAddress</span><span class="o">.</span><span class="n">email_id</span><span class="p">)</span><span class="o">.</span>\
+<span class="mi">60</span> <span class="mf">81.2</span> <span class="n">MiB</span> <span class="mf">34.1</span> <span class="n">MiB</span>          <span class="nb">filter</span><span class="p">(</span><span class="n">send_history</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">bounce</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span>\
+<span class="mi">61</span>                            <span class="nb">all</span><span class="p">()</span>
+<span class="mi">62</span>
+<span class="mi">63</span> <span class="mf">81.2</span> <span class="n">MiB</span> <span class="mf">0.0</span> <span class="n">MiB</span>       <span class="n">email_dict</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="mi">64</span> <span class="mf">84.2</span> <span class="n">MiB</span> <span class="mf">3.0</span> <span class="n">MiB</span>       <span class="k">for</span> <span class="n">email</span> <span class="ow">in</span> <span class="n">emails</span><span class="p">:</span>
+<span class="mi">65</span> <span class="mf">84.2</span> <span class="n">MiB</span> <span class="mf">0.0</span> <span class="n">MiB</span>           <span class="n">email_dict</span><span class="p">[</span><span class="n">email</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="bp">True</span>
+<span class="mi">66</span>
+<span class="mi">67</span> <span class="mf">65.9</span> <span class="n">MiB</span> <span class="o">-</span><span class="mf">18.2</span> <span class="n">MiB</span>     <span class="k">del</span> <span class="n">emails</span>
+<span class="mi">68</span> <span class="mf">65.9</span> <span class="n">MiB</span> <span class="mf">0.0</span> <span class="n">MiB</span>       <span class="k">return</span> <span class="n">email_dict</span>
 </pre></div>
 <p>Wow. By just grabbing that one field I seriously reduced the memory consumption of this method. I had under estimated just how much overhead there is in pulling the entire record in a query.</p>
 <p>Now I take this into account when building queries. Just what do I need form the DB? Then I only grab that.</p>

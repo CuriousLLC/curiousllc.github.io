@@ -5,39 +5,39 @@
 &lt;p&gt;I knew I was running out of memory on my entry level Digital Ocean droplets.
 That is when the segfaults started. I stumbled across &lt;a class="reference external" href="https://pypi.python.org/pypi/memory_profiler"&gt;Memory Profiler&lt;/a&gt; and
 created a quick test program to profile a single function that was causing problems.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;Line # Mem usage Increment Line Contents
-================================================
-56 46.0 MiB 0.0 MiB   @profile
-57                    def get_bounced_emails():
-58 48.2 MiB 2.2 MiB       emails = db.session.query(EmailAddress).\
-59 48.3 MiB 0.0 MiB           join(send_history, send_history.c.email_id == EmailAddress.email_id).\
-60 372.1 MiB 323.9 MiB        filter(send_history.c.bounce == 1).\
-61                            all()
-62
-63 372.1 MiB 0.0 MiB      email_dict = {}
-64 374.1 MiB 2.0 MiB      for email in emails:
-65 374.1 MiB 0.0 MiB          email_dict[email.email_address] = True
-66
-67 314.9 MiB -59.2 MiB    del emails
-68 314.9 MiB 0.0 MiB      return email_dict
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;Line&lt;/span&gt; &lt;span class="c"&gt;# Mem usage Increment Line Contents&lt;/span&gt;
+&lt;span class="o"&gt;================================================&lt;/span&gt;
+&lt;span class="mi"&gt;56&lt;/span&gt; &lt;span class="mf"&gt;46.0&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt;   &lt;span class="nd"&gt;@profile&lt;/span&gt;
+&lt;span class="mi"&gt;57&lt;/span&gt;                    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;get_bounced_emails&lt;/span&gt;&lt;span class="p"&gt;():&lt;/span&gt;
+&lt;span class="mi"&gt;58&lt;/span&gt; &lt;span class="mf"&gt;48.2&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt; &lt;span class="mf"&gt;2.2&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt;       &lt;span class="n"&gt;emails&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;db&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;session&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;query&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;EmailAddress&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;\
+&lt;span class="mi"&gt;59&lt;/span&gt; &lt;span class="mf"&gt;48.3&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt;           &lt;span class="n"&gt;join&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;send_history&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;send_history&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;email_id&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="n"&gt;EmailAddress&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;email_id&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;\
+&lt;span class="mi"&gt;60&lt;/span&gt; &lt;span class="mf"&gt;372.1&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt; &lt;span class="mf"&gt;323.9&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt;        &lt;span class="nb"&gt;filter&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;send_history&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;bounce&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;\
+&lt;span class="mi"&gt;61&lt;/span&gt;                            &lt;span class="nb"&gt;all&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+&lt;span class="mi"&gt;62&lt;/span&gt;
+&lt;span class="mi"&gt;63&lt;/span&gt; &lt;span class="mf"&gt;372.1&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt;      &lt;span class="n"&gt;email_dict&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;{}&lt;/span&gt;
+&lt;span class="mi"&gt;64&lt;/span&gt; &lt;span class="mf"&gt;374.1&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt; &lt;span class="mf"&gt;2.0&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt;      &lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="n"&gt;email&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="n"&gt;emails&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="mi"&gt;65&lt;/span&gt; &lt;span class="mf"&gt;374.1&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt;          &lt;span class="n"&gt;email_dict&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="n"&gt;email&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;email_address&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="bp"&gt;True&lt;/span&gt;
+&lt;span class="mi"&gt;66&lt;/span&gt;
+&lt;span class="mi"&gt;67&lt;/span&gt; &lt;span class="mf"&gt;314.9&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="mf"&gt;59.2&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt;    &lt;span class="k"&gt;del&lt;/span&gt; &lt;span class="n"&gt;emails&lt;/span&gt;
+&lt;span class="mi"&gt;68&lt;/span&gt; &lt;span class="mf"&gt;314.9&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt;      &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="n"&gt;email_dict&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;The memory profiler package makes it real easy to see the memory consumption of your application line by line. In this function, we are just retrieving a ton of records. They are taking up a lot of memory.&lt;/p&gt;
 &lt;p&gt;This is where I learned a little bit about SQLAlchemy. This function only needs the email_address field of the record, but I’m retrieving the entire record. So I made a change to simply grab the email_address record.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;Line # Mem usage Increment Line Contents
-================================================
-56 46.0 MiB 0.0 MiB   @profile
-57                    def get_bounced_emails():
-58 47.1 MiB 1.1 MiB       emails = db.session.query(EmailAddress.email_address).\
-59 47.1 MiB 0.0 MiB           join(send_history, send_history.c.email_id == EmailAddress.email_id).\
-60 81.2 MiB 34.1 MiB          filter(send_history.c.bounce == 1).\
-61                            all()
-62
-63 81.2 MiB 0.0 MiB       email_dict = {}
-64 84.2 MiB 3.0 MiB       for email in emails:
-65 84.2 MiB 0.0 MiB           email_dict[email[0]] = True
-66
-67 65.9 MiB -18.2 MiB     del emails
-68 65.9 MiB 0.0 MiB       return email_dict
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;Line&lt;/span&gt; &lt;span class="c"&gt;# Mem usage Increment Line Contents&lt;/span&gt;
+&lt;span class="o"&gt;================================================&lt;/span&gt;
+&lt;span class="mi"&gt;56&lt;/span&gt; &lt;span class="mf"&gt;46.0&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt;   &lt;span class="nd"&gt;@profile&lt;/span&gt;
+&lt;span class="mi"&gt;57&lt;/span&gt;                    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;get_bounced_emails&lt;/span&gt;&lt;span class="p"&gt;():&lt;/span&gt;
+&lt;span class="mi"&gt;58&lt;/span&gt; &lt;span class="mf"&gt;47.1&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt; &lt;span class="mf"&gt;1.1&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt;       &lt;span class="n"&gt;emails&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;db&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;session&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;query&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;EmailAddress&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;email_address&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;\
+&lt;span class="mi"&gt;59&lt;/span&gt; &lt;span class="mf"&gt;47.1&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt;           &lt;span class="n"&gt;join&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;send_history&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;send_history&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;email_id&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="n"&gt;EmailAddress&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;email_id&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;\
+&lt;span class="mi"&gt;60&lt;/span&gt; &lt;span class="mf"&gt;81.2&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt; &lt;span class="mf"&gt;34.1&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt;          &lt;span class="nb"&gt;filter&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;send_history&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;bounce&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;\
+&lt;span class="mi"&gt;61&lt;/span&gt;                            &lt;span class="nb"&gt;all&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+&lt;span class="mi"&gt;62&lt;/span&gt;
+&lt;span class="mi"&gt;63&lt;/span&gt; &lt;span class="mf"&gt;81.2&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt;       &lt;span class="n"&gt;email_dict&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;{}&lt;/span&gt;
+&lt;span class="mi"&gt;64&lt;/span&gt; &lt;span class="mf"&gt;84.2&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt; &lt;span class="mf"&gt;3.0&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt;       &lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="n"&gt;email&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="n"&gt;emails&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="mi"&gt;65&lt;/span&gt; &lt;span class="mf"&gt;84.2&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt;           &lt;span class="n"&gt;email_dict&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="n"&gt;email&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;]]&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="bp"&gt;True&lt;/span&gt;
+&lt;span class="mi"&gt;66&lt;/span&gt;
+&lt;span class="mi"&gt;67&lt;/span&gt; &lt;span class="mf"&gt;65.9&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="mf"&gt;18.2&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt;     &lt;span class="k"&gt;del&lt;/span&gt; &lt;span class="n"&gt;emails&lt;/span&gt;
+&lt;span class="mi"&gt;68&lt;/span&gt; &lt;span class="mf"&gt;65.9&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt;       &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="n"&gt;email_dict&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;Wow. By just grabbing that one field I seriously reduced the memory consumption of this method. I had under estimated just how much overhead there is in pulling the entire record in a query.&lt;/p&gt;
 &lt;p&gt;Now I take this into account when building queries. Just what do I need form the DB? Then I only grab that.&lt;/p&gt;

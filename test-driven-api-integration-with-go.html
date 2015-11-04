@@ -72,74 +72,74 @@
 <p>Each of these examples is worth taking a look at. Of these, Google's seems the most complete. Their test setup creates a global Mux and httptest.Server for that Mux. Each unit test attaches a handler to the Mux. They also have live tests that don't run in their CI. These are specifically to test whether server side functionality has changed.</p>
 <p><strong>Mocking the calls</strong></p>
 <p>Really, we want to test the API as the user would consume it. We don't want to simply test all the little pieces and assume a nice workflow. So we need to write a test like the user would write their code.</p>
-<div class="highlight"><pre>api := CreateNewApi(&amp;client)
+<div class="highlight"><pre><span class="nx">api</span> <span class="o">:=</span> <span class="nx">CreateNewApi</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">client</span><span class="p">)</span>
 
-controlChan := make(chan bool)
-responseChan, _ := api.SomeMethod(controlChan)
+<span class="nx">controlChan</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kt">bool</span><span class="p">)</span>
+<span class="nx">responseChan</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="nx">api</span><span class="p">.</span><span class="nx">SomeMethod</span><span class="p">(</span><span class="nx">controlChan</span><span class="p">)</span>
 </pre></div>
 <p>CreateNewApi() most likely has us speaking with the actual API server. The API url is hardcoded in the library somewhere. So our test will probably hit the live server. Using the live API for testing violates my third concern. Fortunately we can rewrite the client's transport method to point to a test server. We do this with http.RoundTripper.</p>
-<div class="highlight"><pre>type RewriteTransport struct {
-        Transport http.RoundTripper
-        URL       *url.URL
-}
+<div class="highlight"><pre><span class="kd">type</span> <span class="nx">RewriteTransport</span> <span class="kd">struct</span> <span class="p">{</span>
+        <span class="nx">Transport</span> <span class="nx">http</span><span class="p">.</span><span class="nx">RoundTripper</span>
+        <span class="nx">URL</span>       <span class="o">*</span><span class="nx">url</span><span class="p">.</span><span class="nx">URL</span>
+<span class="p">}</span>
 
-func (t RewriteTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-        // note that url.URL.ResolveReference doesn&#39;t work here
-        // since t.u is an absolute url
-        req.URL.Scheme = t.URL.Scheme
-        req.URL.Host = t.URL.Host
-        req.URL.Path = path.Join(t.URL.Path, req.URL.Path)
-        rt := t.Transport
-        if rt == nil {
-                rt = http.DefaultTransport
-        }
-        return rt.RoundTrip(req)
-}
+<span class="kd">func</span> <span class="p">(</span><span class="nx">t</span> <span class="nx">RewriteTransport</span><span class="p">)</span> <span class="nx">RoundTrip</span><span class="p">(</span><span class="nx">req</span> <span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Response</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// note that url.URL.ResolveReference doesn&#39;t work here</span>
+        <span class="c1">// since t.u is an absolute url</span>
+        <span class="nx">req</span><span class="p">.</span><span class="nx">URL</span><span class="p">.</span><span class="nx">Scheme</span> <span class="p">=</span> <span class="nx">t</span><span class="p">.</span><span class="nx">URL</span><span class="p">.</span><span class="nx">Scheme</span>
+        <span class="nx">req</span><span class="p">.</span><span class="nx">URL</span><span class="p">.</span><span class="nx">Host</span> <span class="p">=</span> <span class="nx">t</span><span class="p">.</span><span class="nx">URL</span><span class="p">.</span><span class="nx">Host</span>
+        <span class="nx">req</span><span class="p">.</span><span class="nx">URL</span><span class="p">.</span><span class="nx">Path</span> <span class="p">=</span> <span class="nx">path</span><span class="p">.</span><span class="nx">Join</span><span class="p">(</span><span class="nx">t</span><span class="p">.</span><span class="nx">URL</span><span class="p">.</span><span class="nx">Path</span><span class="p">,</span> <span class="nx">req</span><span class="p">.</span><span class="nx">URL</span><span class="p">.</span><span class="nx">Path</span><span class="p">)</span>
+        <span class="nx">rt</span> <span class="o">:=</span> <span class="nx">t</span><span class="p">.</span><span class="nx">Transport</span>
+        <span class="k">if</span> <span class="nx">rt</span> <span class="o">==</span> <span class="kc">nil</span> <span class="p">{</span>
+                <span class="nx">rt</span> <span class="p">=</span> <span class="nx">http</span><span class="p">.</span><span class="nx">DefaultTransport</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="nx">rt</span><span class="p">.</span><span class="nx">RoundTrip</span><span class="p">(</span><span class="nx">req</span><span class="p">)</span>
+<span class="p">}</span>
 
-client := &amp;http.Client{
-        Transport: RewriteTransport{
-                URL: testUrl,
-        },
-}
+<span class="nx">client</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">http</span><span class="p">.</span><span class="nx">Client</span><span class="p">{</span>
+        <span class="nx">Transport</span><span class="p">:</span> <span class="nx">RewriteTransport</span><span class="p">{</span>
+                <span class="nx">URL</span><span class="p">:</span> <span class="nx">testUrl</span><span class="p">,</span>
+        <span class="p">},</span>
+<span class="p">}</span>
 </pre></div>
 <p><strong>Minimal response test</strong></p>
 <p>With the custom transport, we are able to implement handlers for our tests. These handlers can return minimal expected responses. Take Flickr for example:</p>
-<div class="highlight"><pre>// https://github.com/masci/flickr/blob/master/response_test.go
-func TestExtra(t *testing.T) {
-        bodyStr := `&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot; ?&gt;
-                &lt;rsp stat=&quot;ok&quot;&gt;
-                        &lt;user id=&quot;23148015@N00&quot;&gt;
-                        &lt;username&gt;Massimiliano Pippi&lt;/username&gt;
-                        &lt;/user&gt;
-                        &lt;brands&gt;
-                          &lt;brand id=&quot;apple&quot;&gt;Apple&lt;/brand&gt;
-                        &lt;/brands&gt;
-                &lt;/rsp&gt;`
+<div class="highlight"><pre><span class="c1">// https://github.com/masci/flickr/blob/master/response_test.go</span>
+<span class="kd">func</span> <span class="nx">TestExtra</span><span class="p">(</span><span class="nx">t</span> <span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">T</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">bodyStr</span> <span class="o">:=</span> <span class="s">`&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot; ?&gt;</span>
+<span class="s">                &lt;rsp stat=&quot;ok&quot;&gt;</span>
+<span class="s">                        &lt;user id=&quot;23148015@N00&quot;&gt;</span>
+<span class="s">                        &lt;username&gt;Massimiliano Pippi&lt;/username&gt;</span>
+<span class="s">                        &lt;/user&gt;</span>
+<span class="s">                        &lt;brands&gt;</span>
+<span class="s">                          &lt;brand id=&quot;apple&quot;&gt;Apple&lt;/brand&gt;</span>
+<span class="s">                        &lt;/brands&gt;</span>
+<span class="s">                &lt;/rsp&gt;`</span>
 
-        flickrResp := &amp;BasicResponse{}
+        <span class="nx">flickrResp</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">BasicResponse</span><span class="p">{}</span>
 
-        response := &amp;http.Response{}    // HL
-        response.Body = NewFakeBody(bodyStr)    // HL
-        err := parseApiResponse(response, flickrResp)   // HL
-        Expect(t, err, nil)
-        Expect(t, flickrResp.Extra != &quot;&quot;, true)
-}
+        <span class="nx">response</span> <span class="o">:=</span> <span class="o">&amp;</span><span class="nx">http</span><span class="p">.</span><span class="nx">Response</span><span class="p">{}</span>    <span class="c1">// HL</span>
+        <span class="nx">response</span><span class="p">.</span><span class="nx">Body</span> <span class="p">=</span> <span class="nx">NewFakeBody</span><span class="p">(</span><span class="nx">bodyStr</span><span class="p">)</span>    <span class="c1">// HL</span>
+        <span class="nx">err</span> <span class="o">:=</span> <span class="nx">parseApiResponse</span><span class="p">(</span><span class="nx">response</span><span class="p">,</span> <span class="nx">flickrResp</span><span class="p">)</span>   <span class="c1">// HL</span>
+        <span class="nx">Expect</span><span class="p">(</span><span class="nx">t</span><span class="p">,</span> <span class="nx">err</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+        <span class="nx">Expect</span><span class="p">(</span><span class="nx">t</span><span class="p">,</span> <span class="nx">flickrResp</span><span class="p">.</span><span class="nx">Extra</span> <span class="o">!=</span> <span class="s">&quot;&quot;</span><span class="p">,</span> <span class="kc">true</span><span class="p">)</span>
+<span class="p">}</span>
 </pre></div>
 <p>Flickr uses a transport rewrite to provide a minimal response to test. This gets us away from using the live API to test data. But the method being testing is parseApiResponse(). This isn't how the user will implement the API.</p>
 <p>This Tumblr API uses the same minimal response method. It also tests functions in the same way a user would call them.</p>
-<div class="highlight"><pre>// https://github.com/MariaTerzieva/gotumblr/blob/master/gotumblr_test.go
-func TestFollowing(t *testing.T) {
-        setup()
-        defer teardown()
+<div class="highlight"><pre><span class="c1">// https://github.com/MariaTerzieva/gotumblr/blob/master/gotumblr_test.go</span>
+<span class="kd">func</span> <span class="nx">TestFollowing</span><span class="p">(</span><span class="nx">t</span> <span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">T</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">setup</span><span class="p">()</span>
+        <span class="k">defer</span> <span class="nx">teardown</span><span class="p">()</span>
 
-        handleFunc(&quot;/v2/user/following&quot;, &quot;GET&quot;, `{&quot;response&quot;: {&quot;total_blogs&quot;: 1}}`, map[string]string{}, t)
+        <span class="nx">handleFunc</span><span class="p">(</span><span class="s">&quot;/v2/user/following&quot;</span><span class="p">,</span> <span class="s">&quot;GET&quot;</span><span class="p">,</span> <span class="s">`{&quot;response&quot;: {&quot;total_blogs&quot;: 1}}`</span><span class="p">,</span> <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">string</span><span class="p">{},</span> <span class="nx">t</span><span class="p">)</span>
 
-        following := client.Following(map[string]string{}).Total_blogs
-        want := int64(1)
-        if following != want {
-                t.Errorf(&quot;Following returned %+v, want %v&quot;, following, want)
-        }
-}
+        <span class="nx">following</span> <span class="o">:=</span> <span class="nx">client</span><span class="p">.</span><span class="nx">Following</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">string</span><span class="p">{}).</span><span class="nx">Total_blogs</span>
+        <span class="nx">want</span> <span class="o">:=</span> <span class="nb">int64</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nx">following</span> <span class="o">!=</span> <span class="nx">want</span> <span class="p">{</span>
+                <span class="nx">t</span><span class="p">.</span><span class="nx">Errorf</span><span class="p">(</span><span class="s">&quot;Following returned %+v, want %v&quot;</span><span class="p">,</span> <span class="nx">following</span><span class="p">,</span> <span class="nx">want</span><span class="p">)</span>
+        <span class="p">}</span>
+<span class="p">}</span>
 </pre></div>
 <p><strong>Hosting test data</strong></p>
 <p>This is a method I've been using that I haven't seen in the wild. It takes advantage of all the API consoles out there. You make a call using the provider's API console in a sandbox, and copy the (usually) JSON response into your test_data/ directory. Then simply serve the appropriate JSON file during the test.</p>
@@ -152,88 +152,88 @@ func TestFollowing(t *testing.T) {
 </pre></div>
 <p>These two json files contain a full API response, including headers, offset/limit/total counts, and other meta information. In our mock handler, we can control which of those files is served based on query parameters.</p>
 <p>To begin, we have a function which takes a channel for returning a *http.Request, and a function which returns the name of the file which contains our appropriate response.</p>
-<div class="highlight"><pre>func createTestServer(requestChan chan *http.Request, getFileName func(*http.Request) string) httptest.Server, http.Client) {
-        handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-                var testData io.Reader
-                var err error
+<div class="highlight"><pre><span class="kd">func</span> <span class="nx">createTestServer</span><span class="p">(</span><span class="nx">requestChan</span> <span class="kd">chan</span> <span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">,</span> <span class="nx">getFileName</span> <span class="kd">func</span><span class="p">(</span><span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span> <span class="kt">string</span><span class="p">)</span> <span class="nx">httptest</span><span class="p">.</span><span class="nx">Server</span><span class="p">,</span> <span class="nx">http</span><span class="p">.</span><span class="nx">Client</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">handler</span> <span class="o">:=</span> <span class="nx">http</span><span class="p">.</span><span class="nx">HandlerFunc</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">w</span> <span class="nx">http</span><span class="p">.</span><span class="nx">ResponseWriter</span><span class="p">,</span> <span class="nx">r</span> <span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span> <span class="p">{</span>
+                <span class="kd">var</span> <span class="nx">testData</span> <span class="nx">io</span><span class="p">.</span><span class="nx">Reader</span>
+                <span class="kd">var</span> <span class="nx">err</span> <span class="kt">error</span>
 
-                // getFileName will determine which response to load based on the request
-                testData, err = os.Open(getFileName(r))
-                if err != nil {
-                        http.NotFound(w, r)
-                        return
-                }
+                <span class="c1">// getFileName will determine which response to load based on the request</span>
+                <span class="nx">testData</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">os</span><span class="p">.</span><span class="nx">Open</span><span class="p">(</span><span class="nx">getFileName</span><span class="p">(</span><span class="nx">r</span><span class="p">))</span>
+                <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+                        <span class="nx">http</span><span class="p">.</span><span class="nx">NotFound</span><span class="p">(</span><span class="nx">w</span><span class="p">,</span> <span class="nx">r</span><span class="p">)</span>
+                        <span class="k">return</span>
+                <span class="p">}</span>
 
-                io.Copy(w, testData)
+                <span class="nx">io</span><span class="p">.</span><span class="nx">Copy</span><span class="p">(</span><span class="nx">w</span><span class="p">,</span> <span class="nx">testData</span><span class="p">)</span>
 
-                requestChan &lt;- r
-        })
+                <span class="nx">requestChan</span> <span class="o">&lt;-</span> <span class="nx">r</span>
+        <span class="p">})</span>
 
-        server := httptest.NewServer(handler)
-        testUrl, _ := url.Parse(server.URL)
+        <span class="nx">server</span> <span class="o">:=</span> <span class="nx">httptest</span><span class="p">.</span><span class="nx">NewServer</span><span class="p">(</span><span class="nx">handler</span><span class="p">)</span>
+        <span class="nx">testUrl</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="nx">url</span><span class="p">.</span><span class="nx">Parse</span><span class="p">(</span><span class="nx">server</span><span class="p">.</span><span class="nx">URL</span><span class="p">)</span>
 
-        client := http.Client{
-                Transport: RewriteTransport{
-                        URL: testUrl,
-                },
-        }
+        <span class="nx">client</span> <span class="o">:=</span> <span class="nx">http</span><span class="p">.</span><span class="nx">Client</span><span class="p">{</span>
+                <span class="nx">Transport</span><span class="p">:</span> <span class="nx">RewriteTransport</span><span class="p">{</span>
+                        <span class="nx">URL</span><span class="p">:</span> <span class="nx">testUrl</span><span class="p">,</span>
+                <span class="p">},</span>
+        <span class="p">}</span>
 
-        // Return our test server and a client which points to it
-        return server, client
-}
+        <span class="c1">// Return our test server and a client which points to it</span>
+        <span class="k">return</span> <span class="nx">server</span><span class="p">,</span> <span class="nx">client</span>
+<span class="p">}</span>
 </pre></div>
 <p>Using this test server and client, we write a test like this:</p>
-<div class="highlight"><pre>func TestGetProjects(t *testing.T) {
+<div class="highlight"><pre><span class="kd">func</span> <span class="nx">TestGetProjects</span><span class="p">(</span><span class="nx">t</span> <span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">T</span><span class="p">)</span> <span class="p">{</span>
 
-        // This is a simple handler, we always return the same response file
-        f := func(r *http.Request) string {
-                return &quot;test_data/projects_full.json&quot;
-        }
+        <span class="c1">// This is a simple handler, we always return the same response file</span>
+        <span class="nx">f</span> <span class="o">:=</span> <span class="kd">func</span><span class="p">(</span><span class="nx">r</span> <span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span> <span class="kt">string</span> <span class="p">{</span>
+                <span class="k">return</span> <span class="s">&quot;test_data/projects_full.json&quot;</span>
+        <span class="p">}</span>
 
-        rCh := make(chan *http.Request, 1)
-        server, client := createTestServer(rCh, f)
-        defer server.Close()
-        defer close(rCh)
+        <span class="nx">rCh</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="nx">server</span><span class="p">,</span> <span class="nx">client</span> <span class="o">:=</span> <span class="nx">createTestServer</span><span class="p">(</span><span class="nx">rCh</span><span class="p">,</span> <span class="nx">f</span><span class="p">)</span>
+        <span class="k">defer</span> <span class="nx">server</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span>
+        <span class="k">defer</span> <span class="nb">close</span><span class="p">(</span><span class="nx">rCh</span><span class="p">)</span>
 
-        api := NewApi(&quot;dummyToken&quot;, &amp;client)
-        resp, err := api.GetProjectsPage(0, 10)
-        if err != nil {
-                t.Error(err)
-        }
+        <span class="nx">api</span> <span class="o">:=</span> <span class="nx">NewApi</span><span class="p">(</span><span class="s">&quot;dummyToken&quot;</span><span class="p">,</span> <span class="o">&amp;</span><span class="nx">client</span><span class="p">)</span>
+        <span class="nx">resp</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">api</span><span class="p">.</span><span class="nx">GetProjectsPage</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+                <span class="nx">t</span><span class="p">.</span><span class="nx">Error</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+        <span class="p">}</span>
 
-        if len(resp) != 10 {
-                t.Errorf(&quot;Expected 10 projects, got %d\n&quot;, len(resp))
-        }
-}
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">resp</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">10</span> <span class="p">{</span>
+                <span class="nx">t</span><span class="p">.</span><span class="nx">Errorf</span><span class="p">(</span><span class="s">&quot;Expected 10 projects, got %d\n&quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">resp</span><span class="p">))</span>
+        <span class="p">}</span>
+<span class="p">}</span>
 </pre></div>
 <p>But we can get more complex. Let's say we want to test our ListProject function. ListProject() returns a channel that the caller can iterate over. Since the ListProject API method only returns 10 objects at a time, our method must make the call again at a new offset. Then the method must send the new objects to the channel.</p>
 <p>Our mockHandler function has inspect the request, and send a different response for the different offset.</p>
-<div class="highlight"><pre>mockHandler := func(r *http.Request) (fileName string) {
-        offset := r.URL.Query().Get(&quot;offset&quot;)
+<div class="highlight"><pre><span class="nx">mockHandler</span> <span class="o">:=</span> <span class="kd">func</span><span class="p">(</span><span class="nx">r</span> <span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span> <span class="p">(</span><span class="nx">fileName</span> <span class="kt">string</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">offset</span> <span class="o">:=</span> <span class="nx">r</span><span class="p">.</span><span class="nx">URL</span><span class="p">.</span><span class="nx">Query</span><span class="p">().</span><span class="nx">Get</span><span class="p">(</span><span class="s">&quot;offset&quot;</span><span class="p">)</span>
 
-        // If our client requested the next page,
-        // send a different json response
-        if offset == &quot;10&quot; {
-                fileName = &quot;test_data/projects_three.json&quot;
-        } else {
-                fileName = &quot;test_data/projects_full.json&quot;
-        }
+        <span class="c1">// If our client requested the next page,</span>
+        <span class="c1">// send a different json response</span>
+        <span class="k">if</span> <span class="nx">offset</span> <span class="o">==</span> <span class="s">&quot;10&quot;</span> <span class="p">{</span>
+                <span class="nx">fileName</span> <span class="p">=</span> <span class="s">&quot;test_data/projects_three.json&quot;</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+                <span class="nx">fileName</span> <span class="p">=</span> <span class="s">&quot;test_data/projects_full.json&quot;</span>
+        <span class="p">}</span>
 
-        return
-}
+        <span class="k">return</span>
+<span class="p">}</span>
 
-/* . . . */
-doneChan := make(chan bool)
-projectChan, _ := api.ListProjects(doneChan)
+<span class="cm">/* . . . */</span>
+<span class="nx">doneChan</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kt">bool</span><span class="p">)</span>
+<span class="nx">projectChan</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="nx">api</span><span class="p">.</span><span class="nx">ListProjects</span><span class="p">(</span><span class="nx">doneChan</span><span class="p">)</span>
 
-cNum := 0
-for _ = range projectChan {
-        cNum += 1
-}
+<span class="nx">cNum</span> <span class="o">:=</span> <span class="mi">0</span>
+<span class="k">for</span> <span class="nx">_</span> <span class="p">=</span> <span class="k">range</span> <span class="nx">projectChan</span> <span class="p">{</span>
+        <span class="nx">cNum</span> <span class="o">+=</span> <span class="mi">1</span>
+<span class="p">}</span>
 
-if cNum != 13 {
-        t.Errorf(&quot;Expected 13 projects, got %d&quot;, cNum)
-}
+<span class="k">if</span> <span class="nx">cNum</span> <span class="o">!=</span> <span class="mi">13</span> <span class="p">{</span>
+        <span class="nx">t</span><span class="p">.</span><span class="nx">Errorf</span><span class="p">(</span><span class="s">&quot;Expected 13 projects, got %d&quot;</span><span class="p">,</span> <span class="nx">cNum</span><span class="p">)</span>
+<span class="p">}</span>
 </pre></div>
 <p>This test verifies that we can iterate over a channel while the API method is making multiple calls to the backend.</p>
 <p>Full source is on <a class="reference external" href="https://github.com/CuriousLLC/Lingotek">Github</a>.</p>

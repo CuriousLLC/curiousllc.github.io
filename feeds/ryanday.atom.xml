@@ -1,5 +1,124 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>Working with hardware</title><link href="http://projects.curiousllc.com/" rel="alternate"></link><link href="http://projects.curiousllc.com/feeds/ryanday.atom.xml" rel="self"></link><id>http://projects.curiousllc.com/</id><updated>2015-05-25T20:05:00-04:00</updated><entry><title>Test driven API integration with Go</title><link href="http://projects.curiousllc.com/test-driven-api-integration-with-go.html" rel="alternate"></link><updated>2015-05-25T20:05:00-04:00</updated><author><name>ryanday</name></author><id>tag:projects.curiousllc.com,2015-05-25:test-driven-api-integration-with-go.html</id><summary type="html">&lt;p&gt;Test Driven design is more than simply testing individual functions before you write then. There are several components of your API client that you want to address:&lt;/p&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Working with hardware</title><link href="http://projects.curiousllc.com/" rel="alternate"></link><link href="http://projects.curiousllc.com/feeds/ryanday.atom.xml" rel="self"></link><id>http://projects.curiousllc.com/</id><updated>2015-07-28T11:15:00-04:00</updated><entry><title>Flask in a Rump Kernel</title><link href="http://projects.curiousllc.com/flask-in-a-rump-kernel.html" rel="alternate"></link><updated>2015-07-28T11:15:00-04:00</updated><author><name>ryanday</name></author><id>tag:projects.curiousllc.com,2015-07-28:flask-in-a-rump-kernel.html</id><summary type="html">&lt;div class="section" id="rump-kernels"&gt;
+&lt;h2&gt;Rump Kernels&lt;/h2&gt;
+&lt;p&gt;&lt;a class="reference external" href="https://github.com/rumpkernel/wiki/wiki/Info:-FAQ#user-content-What_is_a_rump_kernel"&gt;Rump Kernels&lt;/a&gt; are better explained by the FAQ than myself, so I suggest reading
+through it. But essentially a &lt;strong&gt;Rump Kernel&lt;/strong&gt; is a kernel with everything but your bare
+essentials removed. Don't need a file system? Then don't bundle the file system
+drivers. What about the drivers you do need? You get them from an &lt;strong&gt;Anykernel&lt;/strong&gt;!&lt;/p&gt;
+&lt;p&gt;The idea of an &lt;strong&gt;Anykernel&lt;/strong&gt; is that individual drivers can be taken and used in a Rump
+Kernel. NetBSD is an Anykernel. What this means is that a Rump Kernel can use the
+drivers directly from the NetBSD source tree. You don't need to build your own drivers
+to use a Rump Kernel. You can use real-world drivers to build production ready
+&lt;strong&gt;Unikernels&lt;/strong&gt; (&lt;em&gt;wait... unikernels?&lt;/em&gt;).&lt;/p&gt;
+&lt;p&gt;At this time, a &lt;strong&gt;Unikernel&lt;/strong&gt; is built with a script called Rumprun. Rumprun takes your
+application, libc, the rumpkernel, and hypervisor layer, then builds the final product
+(unikernel) that will interact with things. The Unikernel is what you end up running in
+Xen or QEMU.&lt;/p&gt;
+&lt;p&gt;&lt;em&gt;So... back to Python remember?&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;Yes. A Unikernel provides you with a &amp;quot;POSIX-y&amp;quot; environment to operate in. This lets
+most software run right out of the box. Which means we can probably get Python up
+and running without too much trouble.&lt;/p&gt;
+&lt;p&gt;In fact, Python already exists in the Rumprun &lt;a class="reference external" href="https://github.com/rumpkernel/rumprun-packages/tree/master/python"&gt;package system&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="section" id="the-python-package"&gt;
+&lt;h2&gt;The Python Package&lt;/h2&gt;
+&lt;p&gt;The Rumprun &lt;a class="reference external" href="https://github.com/rumpkernel/rumprun-packages"&gt;package system&lt;/a&gt; is similar to the BSD ports structure. A source
+distribution is specified and downloaded. Patches are applied to the source. Then
+everything is compiled into a Unikernel.&lt;/p&gt;
+&lt;p&gt;In the case of Python there were a couple hurdles to overcome.&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;&lt;strong&gt;Cross Compilation&lt;/strong&gt;. The build-rr toolchain lets us build binaries for the Rump
+Kernel environment. The Python config scripts need to be patched in order to make
+this cross compilation option made available.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Static builds&lt;/strong&gt;. Python needs to be compiled statically. We are creating a single,
+bootable, Unikernel. We can't rely on dynamic libraries being availble at runtime.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The Python package makes these cross compilation updates. It also modifies the
+&lt;strong&gt;Modules/Setup.dist&lt;/strong&gt; file to build several modules statically along with Python.&lt;/p&gt;
+&lt;p&gt;To build the Python package you will need a working toolchain, &lt;a class="reference external" href="https://github.com/rumpkernel/wiki/wiki/Tutorial%3A-Building-Rumprun-Unikernels"&gt;start here&lt;/a&gt;. I will assume that you have a working build environment for the rest of the tutorial.&lt;/p&gt;
+&lt;p&gt;Now grab the rumprun packages repo, enter the python package, and start the build.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;git clone git@github.com:rumpkernel/rumprun-packages.git
+&lt;span class="nb"&gt;cd &lt;/span&gt;python
+&lt;span class="nb"&gt;export &lt;/span&gt;&lt;span class="nv"&gt;PATH&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;/path/to/app-tools:&lt;span class="nv"&gt;$PATH&lt;/span&gt;
+make
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;You're going to see a lot of errors like this one:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;collect2: error: ld returned 1 &lt;span class="nb"&gt;exit &lt;/span&gt;status
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;But you will also end up with a Python ISO in the images/ directory. To test out
+your Python package installation, please follow the directions in the &lt;a class="reference external" href="https://github.com/rumpkernel/rumprun-packages/tree/master/python"&gt;README.md&lt;/a&gt;
+file. This will walk you through rumpbake and how to build the bootstrap Python script.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="section" id="running-flask"&gt;
+&lt;h2&gt;Running Flask&lt;/h2&gt;
+&lt;p&gt;At this point, you should have a Unikernel booting up and running the Python &amp;quot;Hello World&amp;quot;
+example. Now our goal is to:&lt;/p&gt;
+&lt;ul class="simple"&gt;
+&lt;li&gt;Build a Python environment with the modules we need&lt;/li&gt;
+&lt;li&gt;Include that environment in our unikernel&lt;/li&gt;
+&lt;li&gt;Setup networking&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Building the Python environment is fairly straight forward. Using the same version of Python
+as your Unikernel (probably 3.4.3) create a virtual environment and install any packages
+you'd like available to your Unikernel. In this case we're just installing Flask.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;pyvenv-3.4 helloworld-env
+&lt;span class="nb"&gt;source &lt;/span&gt;helloworld-env/bin/activate
+pip install flask
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;To include this environment in the Unikernel, we want to build an ISO containing our site
+packages. We will end up mounting this ISO inside the Unikernel. Just like we did for
+the static Python build.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;genisoimage -r -o py3env.iso helloworld-env/lib/python3.4/site-packages
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Setting up networking requires us to create a TAP device. This will let the host machine
+pass traffic to our Unikernel. We'll setup 10.0.120.100, and then our Unikernel will
+listen on 10.0.120.101.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;sudo ip tuntap add tap0 mode tap
+sudo ip addr add 10.0.120.100/24 dev tap0
+sudo ip link &lt;span class="nb"&gt;set &lt;/span&gt;dev tap0 up
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;We will avoid doing anything special for our Flask application. Just a basic example will
+be enough for now.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="c"&gt;# main.py&lt;/span&gt;
+&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;flask&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;Flask&lt;/span&gt;
+&lt;span class="n"&gt;app&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;Flask&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;__name__&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+
+&lt;span class="nd"&gt;@app.route&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;/&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;hello&lt;/span&gt;&lt;span class="p"&gt;():&lt;/span&gt;
+    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;Hello World!&amp;quot;&lt;/span&gt;
+
+
+&lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="n"&gt;__name__&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;__main__&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+    &lt;span class="n"&gt;app&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;run&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;host&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s"&gt;&amp;#39;0.0.0.0&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Now we are able to start our Unikernel. The following script should be familiar. We are
+following the steps from the README.md file from earlier. However we also setup networking
+and mount our Python environment in the site-packages directory that our Unikernel sees.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="c"&gt;#!/bin/sh&lt;/span&gt;
+
+&lt;span class="nv"&gt;PATH&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;/home/rday/Development/os/rump/qemu/bin:&lt;span class="nv"&gt;$PATH&lt;/span&gt;:/home/rday/Development/os/rump/rumprun/app-tools
+
+cython --embed -v -3 -Werror main.py
+x86_64-rumprun-netbsd-gcc main.c &lt;span class="se"&gt;\&lt;/span&gt;
+  -I../Python-3.4.3/pythondist/include/python3.4m &lt;span class="se"&gt;\&lt;/span&gt;
+  -L../Python-3.4.3/pythondist/lib &lt;span class="se"&gt;\&lt;/span&gt;
+  -lpython3.4m -lutil -lm -lz -lssl -lcrypto
+
+rumpbake hw_virtio a.bin a.out
+
+rumprun qemu -i &lt;span class="se"&gt;\&lt;/span&gt;
+      -I &lt;span class="k"&gt;if&lt;/span&gt;,vioif,&lt;span class="s1"&gt;&amp;#39;-net tap,ifname=tap0,script=no&amp;#39;&lt;/span&gt;&lt;span class="se"&gt;\&lt;/span&gt;
+      -W &lt;span class="k"&gt;if&lt;/span&gt;,inet,static,10.0.120.101/24 &lt;span class="se"&gt;\&lt;/span&gt;
+      -b ../../python.iso,/python/lib/python3.4 &lt;span class="se"&gt;\&lt;/span&gt;
+      -b ../../stubetc.iso,/etc &lt;span class="se"&gt;\&lt;/span&gt;
+      -b py3env.iso,/python/lib/python3.4/site-packages &lt;span class="se"&gt;\&lt;/span&gt;
+      -e &lt;span class="nv"&gt;PYTHONHOME&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;/python a.bin &lt;span class="se"&gt;\&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Give it a shot. Run the script, and visit &lt;a class="reference external" href="http://10.0.120.101:5000"&gt;http://10.0.120.101:5000&lt;/a&gt;. You should get the
+&amp;quot;Hello World&amp;quot; message to pop up!&lt;/p&gt;
+&lt;/div&gt;
+</summary></entry><entry><title>Test driven API integration with Go</title><link href="http://projects.curiousllc.com/test-driven-api-integration-with-go.html" rel="alternate"></link><updated>2015-05-25T20:05:00-04:00</updated><author><name>ryanday</name></author><id>tag:projects.curiousllc.com,2015-05-25:test-driven-api-integration-with-go.html</id><summary type="html">&lt;p&gt;Test Driven design is more than simply testing individual functions before you write then. There are several components of your API client that you want to address:&lt;/p&gt;
 &lt;ul class="simple"&gt;
 &lt;li&gt;How the workflow will appear from a user's perspective.&lt;/li&gt;
 &lt;li&gt;How the API meta control will work (pages, a cursor, offset/limit, authenticate, this sort of thing).&lt;/li&gt;
@@ -16,74 +135,74 @@
 &lt;p&gt;Each of these examples is worth taking a look at. Of these, Google's seems the most complete. Their test setup creates a global Mux and httptest.Server for that Mux. Each unit test attaches a handler to the Mux. They also have live tests that don't run in their CI. These are specifically to test whether server side functionality has changed.&lt;/p&gt;
 &lt;p&gt;&lt;strong&gt;Mocking the calls&lt;/strong&gt;&lt;/p&gt;
 &lt;p&gt;Really, we want to test the API as the user would consume it. We don't want to simply test all the little pieces and assume a nice workflow. So we need to write a test like the user would write their code.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;api := CreateNewApi(&amp;amp;client)
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="nx"&gt;api&lt;/span&gt; &lt;span class="o"&gt;:=&lt;/span&gt; &lt;span class="nx"&gt;CreateNewApi&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="o"&gt;&amp;amp;&lt;/span&gt;&lt;span class="nx"&gt;client&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 
-controlChan := make(chan bool)
-responseChan, _ := api.SomeMethod(controlChan)
+&lt;span class="nx"&gt;controlChan&lt;/span&gt; &lt;span class="o"&gt;:=&lt;/span&gt; &lt;span class="nb"&gt;make&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="kd"&gt;chan&lt;/span&gt; &lt;span class="kt"&gt;bool&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="nx"&gt;responseChan&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;_&lt;/span&gt; &lt;span class="o"&gt;:=&lt;/span&gt; &lt;span class="nx"&gt;api&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;SomeMethod&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;controlChan&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;CreateNewApi() most likely has us speaking with the actual API server. The API url is hardcoded in the library somewhere. So our test will probably hit the live server. Using the live API for testing violates my third concern. Fortunately we can rewrite the client's transport method to point to a test server. We do this with http.RoundTripper.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;type RewriteTransport struct {
-        Transport http.RoundTripper
-        URL       *url.URL
-}
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="kd"&gt;type&lt;/span&gt; &lt;span class="nx"&gt;RewriteTransport&lt;/span&gt; &lt;span class="kd"&gt;struct&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="nx"&gt;Transport&lt;/span&gt; &lt;span class="nx"&gt;http&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;RoundTripper&lt;/span&gt;
+        &lt;span class="nx"&gt;URL&lt;/span&gt;       &lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="nx"&gt;url&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;URL&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
 
-func (t RewriteTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-        // note that url.URL.ResolveReference doesn&amp;#39;t work here
-        // since t.u is an absolute url
-        req.URL.Scheme = t.URL.Scheme
-        req.URL.Host = t.URL.Host
-        req.URL.Path = path.Join(t.URL.Path, req.URL.Path)
-        rt := t.Transport
-        if rt == nil {
-                rt = http.DefaultTransport
-        }
-        return rt.RoundTrip(req)
-}
+&lt;span class="kd"&gt;func&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;t&lt;/span&gt; &lt;span class="nx"&gt;RewriteTransport&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="nx"&gt;RoundTrip&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;req&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="nx"&gt;http&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Request&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="nx"&gt;http&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Response&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="kt"&gt;error&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="c1"&gt;// note that url.URL.ResolveReference doesn&amp;#39;t work here&lt;/span&gt;
+        &lt;span class="c1"&gt;// since t.u is an absolute url&lt;/span&gt;
+        &lt;span class="nx"&gt;req&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;URL&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Scheme&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="nx"&gt;t&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;URL&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Scheme&lt;/span&gt;
+        &lt;span class="nx"&gt;req&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;URL&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Host&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="nx"&gt;t&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;URL&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Host&lt;/span&gt;
+        &lt;span class="nx"&gt;req&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;URL&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Path&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="nx"&gt;path&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Join&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;t&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;URL&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Path&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;req&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;URL&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Path&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="nx"&gt;rt&lt;/span&gt; &lt;span class="o"&gt;:=&lt;/span&gt; &lt;span class="nx"&gt;t&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Transport&lt;/span&gt;
+        &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="nx"&gt;rt&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="kc"&gt;nil&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+                &lt;span class="nx"&gt;rt&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="nx"&gt;http&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;DefaultTransport&lt;/span&gt;
+        &lt;span class="p"&gt;}&lt;/span&gt;
+        &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="nx"&gt;rt&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;RoundTrip&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;req&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
 
-client := &amp;amp;http.Client{
-        Transport: RewriteTransport{
-                URL: testUrl,
-        },
-}
+&lt;span class="nx"&gt;client&lt;/span&gt; &lt;span class="o"&gt;:=&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&lt;/span&gt;&lt;span class="nx"&gt;http&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Client&lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="nx"&gt;Transport&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="nx"&gt;RewriteTransport&lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;
+                &lt;span class="nx"&gt;URL&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="nx"&gt;testUrl&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+        &lt;span class="p"&gt;},&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;&lt;strong&gt;Minimal response test&lt;/strong&gt;&lt;/p&gt;
 &lt;p&gt;With the custom transport, we are able to implement handlers for our tests. These handlers can return minimal expected responses. Take Flickr for example:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;// https://github.com/masci/flickr/blob/master/response_test.go
-func TestExtra(t *testing.T) {
-        bodyStr := `&amp;lt;?xml version=&amp;quot;1.0&amp;quot; encoding=&amp;quot;utf-8&amp;quot; ?&amp;gt;
-                &amp;lt;rsp stat=&amp;quot;ok&amp;quot;&amp;gt;
-                        &amp;lt;user id=&amp;quot;23148015@N00&amp;quot;&amp;gt;
-                        &amp;lt;username&amp;gt;Massimiliano Pippi&amp;lt;/username&amp;gt;
-                        &amp;lt;/user&amp;gt;
-                        &amp;lt;brands&amp;gt;
-                          &amp;lt;brand id=&amp;quot;apple&amp;quot;&amp;gt;Apple&amp;lt;/brand&amp;gt;
-                        &amp;lt;/brands&amp;gt;
-                &amp;lt;/rsp&amp;gt;`
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="c1"&gt;// https://github.com/masci/flickr/blob/master/response_test.go&lt;/span&gt;
+&lt;span class="kd"&gt;func&lt;/span&gt; &lt;span class="nx"&gt;TestExtra&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;t&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="nx"&gt;testing&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;T&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="nx"&gt;bodyStr&lt;/span&gt; &lt;span class="o"&gt;:=&lt;/span&gt; &lt;span class="s"&gt;`&amp;lt;?xml version=&amp;quot;1.0&amp;quot; encoding=&amp;quot;utf-8&amp;quot; ?&amp;gt;&lt;/span&gt;
+&lt;span class="s"&gt;                &amp;lt;rsp stat=&amp;quot;ok&amp;quot;&amp;gt;&lt;/span&gt;
+&lt;span class="s"&gt;                        &amp;lt;user id=&amp;quot;23148015@N00&amp;quot;&amp;gt;&lt;/span&gt;
+&lt;span class="s"&gt;                        &amp;lt;username&amp;gt;Massimiliano Pippi&amp;lt;/username&amp;gt;&lt;/span&gt;
+&lt;span class="s"&gt;                        &amp;lt;/user&amp;gt;&lt;/span&gt;
+&lt;span class="s"&gt;                        &amp;lt;brands&amp;gt;&lt;/span&gt;
+&lt;span class="s"&gt;                          &amp;lt;brand id=&amp;quot;apple&amp;quot;&amp;gt;Apple&amp;lt;/brand&amp;gt;&lt;/span&gt;
+&lt;span class="s"&gt;                        &amp;lt;/brands&amp;gt;&lt;/span&gt;
+&lt;span class="s"&gt;                &amp;lt;/rsp&amp;gt;`&lt;/span&gt;
 
-        flickrResp := &amp;amp;BasicResponse{}
+        &lt;span class="nx"&gt;flickrResp&lt;/span&gt; &lt;span class="o"&gt;:=&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&lt;/span&gt;&lt;span class="nx"&gt;BasicResponse&lt;/span&gt;&lt;span class="p"&gt;{}&lt;/span&gt;
 
-        response := &amp;amp;http.Response{}    // HL
-        response.Body = NewFakeBody(bodyStr)    // HL
-        err := parseApiResponse(response, flickrResp)   // HL
-        Expect(t, err, nil)
-        Expect(t, flickrResp.Extra != &amp;quot;&amp;quot;, true)
-}
+        &lt;span class="nx"&gt;response&lt;/span&gt; &lt;span class="o"&gt;:=&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&lt;/span&gt;&lt;span class="nx"&gt;http&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Response&lt;/span&gt;&lt;span class="p"&gt;{}&lt;/span&gt;    &lt;span class="c1"&gt;// HL&lt;/span&gt;
+        &lt;span class="nx"&gt;response&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Body&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="nx"&gt;NewFakeBody&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;bodyStr&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;    &lt;span class="c1"&gt;// HL&lt;/span&gt;
+        &lt;span class="nx"&gt;err&lt;/span&gt; &lt;span class="o"&gt;:=&lt;/span&gt; &lt;span class="nx"&gt;parseApiResponse&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;response&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;flickrResp&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;   &lt;span class="c1"&gt;// HL&lt;/span&gt;
+        &lt;span class="nx"&gt;Expect&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;t&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;err&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="kc"&gt;nil&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="nx"&gt;Expect&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;t&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;flickrResp&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Extra&lt;/span&gt; &lt;span class="o"&gt;!=&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="kc"&gt;true&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;Flickr uses a transport rewrite to provide a minimal response to test. This gets us away from using the live API to test data. But the method being testing is parseApiResponse(). This isn't how the user will implement the API.&lt;/p&gt;
 &lt;p&gt;This Tumblr API uses the same minimal response method. It also tests functions in the same way a user would call them.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;// https://github.com/MariaTerzieva/gotumblr/blob/master/gotumblr_test.go
-func TestFollowing(t *testing.T) {
-        setup()
-        defer teardown()
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="c1"&gt;// https://github.com/MariaTerzieva/gotumblr/blob/master/gotumblr_test.go&lt;/span&gt;
+&lt;span class="kd"&gt;func&lt;/span&gt; &lt;span class="nx"&gt;TestFollowing&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;t&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="nx"&gt;testing&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;T&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="nx"&gt;setup&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+        &lt;span class="k"&gt;defer&lt;/span&gt; &lt;span class="nx"&gt;teardown&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
 
-        handleFunc(&amp;quot;/v2/user/following&amp;quot;, &amp;quot;GET&amp;quot;, `{&amp;quot;response&amp;quot;: {&amp;quot;total_blogs&amp;quot;: 1}}`, map[string]string{}, t)
+        &lt;span class="nx"&gt;handleFunc&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;/v2/user/following&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;GET&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s"&gt;`{&amp;quot;response&amp;quot;: {&amp;quot;total_blogs&amp;quot;: 1}}`&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="kd"&gt;map&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="kt"&gt;string&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;&lt;span class="kt"&gt;string&lt;/span&gt;&lt;span class="p"&gt;{},&lt;/span&gt; &lt;span class="nx"&gt;t&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 
-        following := client.Following(map[string]string{}).Total_blogs
-        want := int64(1)
-        if following != want {
-                t.Errorf(&amp;quot;Following returned %+v, want %v&amp;quot;, following, want)
-        }
-}
+        &lt;span class="nx"&gt;following&lt;/span&gt; &lt;span class="o"&gt;:=&lt;/span&gt; &lt;span class="nx"&gt;client&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Following&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="kd"&gt;map&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="kt"&gt;string&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;&lt;span class="kt"&gt;string&lt;/span&gt;&lt;span class="p"&gt;{}).&lt;/span&gt;&lt;span class="nx"&gt;Total_blogs&lt;/span&gt;
+        &lt;span class="nx"&gt;want&lt;/span&gt; &lt;span class="o"&gt;:=&lt;/span&gt; &lt;span class="nb"&gt;int64&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="nx"&gt;following&lt;/span&gt; &lt;span class="o"&gt;!=&lt;/span&gt; &lt;span class="nx"&gt;want&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+                &lt;span class="nx"&gt;t&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Errorf&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;Following returned %+v, want %v&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;following&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;want&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="p"&gt;}&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;&lt;strong&gt;Hosting test data&lt;/strong&gt;&lt;/p&gt;
 &lt;p&gt;This is a method I've been using that I haven't seen in the wild. It takes advantage of all the API consoles out there. You make a call using the provider's API console in a sandbox, and copy the (usually) JSON response into your test_data/ directory. Then simply serve the appropriate JSON file during the test.&lt;/p&gt;
@@ -96,88 +215,88 @@ func TestFollowing(t *testing.T) {
 &lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;These two json files contain a full API response, including headers, offset/limit/total counts, and other meta information. In our mock handler, we can control which of those files is served based on query parameters.&lt;/p&gt;
 &lt;p&gt;To begin, we have a function which takes a channel for returning a *http.Request, and a function which returns the name of the file which contains our appropriate response.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;func createTestServer(requestChan chan *http.Request, getFileName func(*http.Request) string) httptest.Server, http.Client) {
-        handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-                var testData io.Reader
-                var err error
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="kd"&gt;func&lt;/span&gt; &lt;span class="nx"&gt;createTestServer&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;requestChan&lt;/span&gt; &lt;span class="kd"&gt;chan&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="nx"&gt;http&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Request&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;getFileName&lt;/span&gt; &lt;span class="kd"&gt;func&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="nx"&gt;http&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Request&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="kt"&gt;string&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="nx"&gt;httptest&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Server&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;http&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Client&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="nx"&gt;handler&lt;/span&gt; &lt;span class="o"&gt;:=&lt;/span&gt; &lt;span class="nx"&gt;http&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;HandlerFunc&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="kd"&gt;func&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;w&lt;/span&gt; &lt;span class="nx"&gt;http&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;ResponseWriter&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;r&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="nx"&gt;http&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Request&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+                &lt;span class="kd"&gt;var&lt;/span&gt; &lt;span class="nx"&gt;testData&lt;/span&gt; &lt;span class="nx"&gt;io&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Reader&lt;/span&gt;
+                &lt;span class="kd"&gt;var&lt;/span&gt; &lt;span class="nx"&gt;err&lt;/span&gt; &lt;span class="kt"&gt;error&lt;/span&gt;
 
-                // getFileName will determine which response to load based on the request
-                testData, err = os.Open(getFileName(r))
-                if err != nil {
-                        http.NotFound(w, r)
-                        return
-                }
+                &lt;span class="c1"&gt;// getFileName will determine which response to load based on the request&lt;/span&gt;
+                &lt;span class="nx"&gt;testData&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;err&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="nx"&gt;os&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Open&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;getFileName&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;r&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+                &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="nx"&gt;err&lt;/span&gt; &lt;span class="o"&gt;!=&lt;/span&gt; &lt;span class="kc"&gt;nil&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+                        &lt;span class="nx"&gt;http&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;NotFound&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;w&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;r&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+                        &lt;span class="k"&gt;return&lt;/span&gt;
+                &lt;span class="p"&gt;}&lt;/span&gt;
 
-                io.Copy(w, testData)
+                &lt;span class="nx"&gt;io&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Copy&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;w&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;testData&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 
-                requestChan &amp;lt;- r
-        })
+                &lt;span class="nx"&gt;requestChan&lt;/span&gt; &lt;span class="o"&gt;&amp;lt;-&lt;/span&gt; &lt;span class="nx"&gt;r&lt;/span&gt;
+        &lt;span class="p"&gt;})&lt;/span&gt;
 
-        server := httptest.NewServer(handler)
-        testUrl, _ := url.Parse(server.URL)
+        &lt;span class="nx"&gt;server&lt;/span&gt; &lt;span class="o"&gt;:=&lt;/span&gt; &lt;span class="nx"&gt;httptest&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;NewServer&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;handler&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="nx"&gt;testUrl&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;_&lt;/span&gt; &lt;span class="o"&gt;:=&lt;/span&gt; &lt;span class="nx"&gt;url&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Parse&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;server&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;URL&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 
-        client := http.Client{
-                Transport: RewriteTransport{
-                        URL: testUrl,
-                },
-        }
+        &lt;span class="nx"&gt;client&lt;/span&gt; &lt;span class="o"&gt;:=&lt;/span&gt; &lt;span class="nx"&gt;http&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Client&lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;
+                &lt;span class="nx"&gt;Transport&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="nx"&gt;RewriteTransport&lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;
+                        &lt;span class="nx"&gt;URL&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="nx"&gt;testUrl&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+                &lt;span class="p"&gt;},&lt;/span&gt;
+        &lt;span class="p"&gt;}&lt;/span&gt;
 
-        // Return our test server and a client which points to it
-        return server, client
-}
+        &lt;span class="c1"&gt;// Return our test server and a client which points to it&lt;/span&gt;
+        &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="nx"&gt;server&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;client&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;Using this test server and client, we write a test like this:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;func TestGetProjects(t *testing.T) {
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="kd"&gt;func&lt;/span&gt; &lt;span class="nx"&gt;TestGetProjects&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;t&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="nx"&gt;testing&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;T&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
 
-        // This is a simple handler, we always return the same response file
-        f := func(r *http.Request) string {
-                return &amp;quot;test_data/projects_full.json&amp;quot;
-        }
+        &lt;span class="c1"&gt;// This is a simple handler, we always return the same response file&lt;/span&gt;
+        &lt;span class="nx"&gt;f&lt;/span&gt; &lt;span class="o"&gt;:=&lt;/span&gt; &lt;span class="kd"&gt;func&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;r&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="nx"&gt;http&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Request&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="kt"&gt;string&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+                &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;test_data/projects_full.json&amp;quot;&lt;/span&gt;
+        &lt;span class="p"&gt;}&lt;/span&gt;
 
-        rCh := make(chan *http.Request, 1)
-        server, client := createTestServer(rCh, f)
-        defer server.Close()
-        defer close(rCh)
+        &lt;span class="nx"&gt;rCh&lt;/span&gt; &lt;span class="o"&gt;:=&lt;/span&gt; &lt;span class="nb"&gt;make&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="kd"&gt;chan&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="nx"&gt;http&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Request&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="nx"&gt;server&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;client&lt;/span&gt; &lt;span class="o"&gt;:=&lt;/span&gt; &lt;span class="nx"&gt;createTestServer&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;rCh&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;f&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="k"&gt;defer&lt;/span&gt; &lt;span class="nx"&gt;server&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Close&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+        &lt;span class="k"&gt;defer&lt;/span&gt; &lt;span class="nb"&gt;close&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;rCh&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 
-        api := NewApi(&amp;quot;dummyToken&amp;quot;, &amp;amp;client)
-        resp, err := api.GetProjectsPage(0, 10)
-        if err != nil {
-                t.Error(err)
-        }
+        &lt;span class="nx"&gt;api&lt;/span&gt; &lt;span class="o"&gt;:=&lt;/span&gt; &lt;span class="nx"&gt;NewApi&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;dummyToken&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&lt;/span&gt;&lt;span class="nx"&gt;client&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="nx"&gt;resp&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;err&lt;/span&gt; &lt;span class="o"&gt;:=&lt;/span&gt; &lt;span class="nx"&gt;api&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;GetProjectsPage&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;10&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="nx"&gt;err&lt;/span&gt; &lt;span class="o"&gt;!=&lt;/span&gt; &lt;span class="kc"&gt;nil&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+                &lt;span class="nx"&gt;t&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Error&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;err&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="p"&gt;}&lt;/span&gt;
 
-        if len(resp) != 10 {
-                t.Errorf(&amp;quot;Expected 10 projects, got %d\n&amp;quot;, len(resp))
-        }
-}
+        &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="nb"&gt;len&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;resp&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;!=&lt;/span&gt; &lt;span class="mi"&gt;10&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+                &lt;span class="nx"&gt;t&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Errorf&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;Expected 10 projects, got %d\n&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nb"&gt;len&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;resp&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+        &lt;span class="p"&gt;}&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;But we can get more complex. Let's say we want to test our ListProject function. ListProject() returns a channel that the caller can iterate over. Since the ListProject API method only returns 10 objects at a time, our method must make the call again at a new offset. Then the method must send the new objects to the channel.&lt;/p&gt;
 &lt;p&gt;Our mockHandler function has inspect the request, and send a different response for the different offset.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;mockHandler := func(r *http.Request) (fileName string) {
-        offset := r.URL.Query().Get(&amp;quot;offset&amp;quot;)
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="nx"&gt;mockHandler&lt;/span&gt; &lt;span class="o"&gt;:=&lt;/span&gt; &lt;span class="kd"&gt;func&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;r&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="nx"&gt;http&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Request&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;fileName&lt;/span&gt; &lt;span class="kt"&gt;string&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="nx"&gt;offset&lt;/span&gt; &lt;span class="o"&gt;:=&lt;/span&gt; &lt;span class="nx"&gt;r&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;URL&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Query&lt;/span&gt;&lt;span class="p"&gt;().&lt;/span&gt;&lt;span class="nx"&gt;Get&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;offset&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 
-        // If our client requested the next page,
-        // send a different json response
-        if offset == &amp;quot;10&amp;quot; {
-                fileName = &amp;quot;test_data/projects_three.json&amp;quot;
-        } else {
-                fileName = &amp;quot;test_data/projects_full.json&amp;quot;
-        }
+        &lt;span class="c1"&gt;// If our client requested the next page,&lt;/span&gt;
+        &lt;span class="c1"&gt;// send a different json response&lt;/span&gt;
+        &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="nx"&gt;offset&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;10&amp;quot;&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+                &lt;span class="nx"&gt;fileName&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;test_data/projects_three.json&amp;quot;&lt;/span&gt;
+        &lt;span class="p"&gt;}&lt;/span&gt; &lt;span class="k"&gt;else&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+                &lt;span class="nx"&gt;fileName&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="s"&gt;&amp;quot;test_data/projects_full.json&amp;quot;&lt;/span&gt;
+        &lt;span class="p"&gt;}&lt;/span&gt;
 
-        return
-}
+        &lt;span class="k"&gt;return&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
 
-/* . . . */
-doneChan := make(chan bool)
-projectChan, _ := api.ListProjects(doneChan)
+&lt;span class="cm"&gt;/* . . . */&lt;/span&gt;
+&lt;span class="nx"&gt;doneChan&lt;/span&gt; &lt;span class="o"&gt;:=&lt;/span&gt; &lt;span class="nb"&gt;make&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="kd"&gt;chan&lt;/span&gt; &lt;span class="kt"&gt;bool&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="nx"&gt;projectChan&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;_&lt;/span&gt; &lt;span class="o"&gt;:=&lt;/span&gt; &lt;span class="nx"&gt;api&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;ListProjects&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;doneChan&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 
-cNum := 0
-for _ = range projectChan {
-        cNum += 1
-}
+&lt;span class="nx"&gt;cNum&lt;/span&gt; &lt;span class="o"&gt;:=&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;
+&lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="nx"&gt;_&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="k"&gt;range&lt;/span&gt; &lt;span class="nx"&gt;projectChan&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="nx"&gt;cNum&lt;/span&gt; &lt;span class="o"&gt;+=&lt;/span&gt; &lt;span class="mi"&gt;1&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
 
-if cNum != 13 {
-        t.Errorf(&amp;quot;Expected 13 projects, got %d&amp;quot;, cNum)
-}
+&lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="nx"&gt;cNum&lt;/span&gt; &lt;span class="o"&gt;!=&lt;/span&gt; &lt;span class="mi"&gt;13&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="nx"&gt;t&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Errorf&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;Expected 13 projects, got %d&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;cNum&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;This test verifies that we can iterate over a channel while the API method is making multiple calls to the backend.&lt;/p&gt;
 &lt;p&gt;Full source is on &lt;a class="reference external" href="https://github.com/CuriousLLC/Lingotek"&gt;Github&lt;/a&gt;.&lt;/p&gt;
@@ -187,39 +306,39 @@ if cNum != 13 {
 &lt;p&gt;I knew I was running out of memory on my entry level Digital Ocean droplets.
 That is when the segfaults started. I stumbled across &lt;a class="reference external" href="https://pypi.python.org/pypi/memory_profiler"&gt;Memory Profiler&lt;/a&gt; and
 created a quick test program to profile a single function that was causing problems.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;Line # Mem usage Increment Line Contents
-================================================
-56 46.0 MiB 0.0 MiB   @profile
-57                    def get_bounced_emails():
-58 48.2 MiB 2.2 MiB       emails = db.session.query(EmailAddress).\
-59 48.3 MiB 0.0 MiB           join(send_history, send_history.c.email_id == EmailAddress.email_id).\
-60 372.1 MiB 323.9 MiB        filter(send_history.c.bounce == 1).\
-61                            all()
-62
-63 372.1 MiB 0.0 MiB      email_dict = {}
-64 374.1 MiB 2.0 MiB      for email in emails:
-65 374.1 MiB 0.0 MiB          email_dict[email.email_address] = True
-66
-67 314.9 MiB -59.2 MiB    del emails
-68 314.9 MiB 0.0 MiB      return email_dict
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;Line&lt;/span&gt; &lt;span class="c"&gt;# Mem usage Increment Line Contents&lt;/span&gt;
+&lt;span class="o"&gt;================================================&lt;/span&gt;
+&lt;span class="mi"&gt;56&lt;/span&gt; &lt;span class="mf"&gt;46.0&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt;   &lt;span class="nd"&gt;@profile&lt;/span&gt;
+&lt;span class="mi"&gt;57&lt;/span&gt;                    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;get_bounced_emails&lt;/span&gt;&lt;span class="p"&gt;():&lt;/span&gt;
+&lt;span class="mi"&gt;58&lt;/span&gt; &lt;span class="mf"&gt;48.2&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt; &lt;span class="mf"&gt;2.2&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt;       &lt;span class="n"&gt;emails&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;db&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;session&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;query&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;EmailAddress&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;\
+&lt;span class="mi"&gt;59&lt;/span&gt; &lt;span class="mf"&gt;48.3&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt;           &lt;span class="n"&gt;join&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;send_history&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;send_history&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;email_id&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="n"&gt;EmailAddress&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;email_id&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;\
+&lt;span class="mi"&gt;60&lt;/span&gt; &lt;span class="mf"&gt;372.1&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt; &lt;span class="mf"&gt;323.9&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt;        &lt;span class="nb"&gt;filter&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;send_history&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;bounce&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;\
+&lt;span class="mi"&gt;61&lt;/span&gt;                            &lt;span class="nb"&gt;all&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+&lt;span class="mi"&gt;62&lt;/span&gt;
+&lt;span class="mi"&gt;63&lt;/span&gt; &lt;span class="mf"&gt;372.1&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt;      &lt;span class="n"&gt;email_dict&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;{}&lt;/span&gt;
+&lt;span class="mi"&gt;64&lt;/span&gt; &lt;span class="mf"&gt;374.1&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt; &lt;span class="mf"&gt;2.0&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt;      &lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="n"&gt;email&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="n"&gt;emails&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="mi"&gt;65&lt;/span&gt; &lt;span class="mf"&gt;374.1&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt;          &lt;span class="n"&gt;email_dict&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="n"&gt;email&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;email_address&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="bp"&gt;True&lt;/span&gt;
+&lt;span class="mi"&gt;66&lt;/span&gt;
+&lt;span class="mi"&gt;67&lt;/span&gt; &lt;span class="mf"&gt;314.9&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="mf"&gt;59.2&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt;    &lt;span class="k"&gt;del&lt;/span&gt; &lt;span class="n"&gt;emails&lt;/span&gt;
+&lt;span class="mi"&gt;68&lt;/span&gt; &lt;span class="mf"&gt;314.9&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt;      &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="n"&gt;email_dict&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;The memory profiler package makes it real easy to see the memory consumption of your application line by line. In this function, we are just retrieving a ton of records. They are taking up a lot of memory.&lt;/p&gt;
 &lt;p&gt;This is where I learned a little bit about SQLAlchemy. This function only needs the email_address field of the record, but I’m retrieving the entire record. So I made a change to simply grab the email_address record.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;Line # Mem usage Increment Line Contents
-================================================
-56 46.0 MiB 0.0 MiB   @profile
-57                    def get_bounced_emails():
-58 47.1 MiB 1.1 MiB       emails = db.session.query(EmailAddress.email_address).\
-59 47.1 MiB 0.0 MiB           join(send_history, send_history.c.email_id == EmailAddress.email_id).\
-60 81.2 MiB 34.1 MiB          filter(send_history.c.bounce == 1).\
-61                            all()
-62
-63 81.2 MiB 0.0 MiB       email_dict = {}
-64 84.2 MiB 3.0 MiB       for email in emails:
-65 84.2 MiB 0.0 MiB           email_dict[email[0]] = True
-66
-67 65.9 MiB -18.2 MiB     del emails
-68 65.9 MiB 0.0 MiB       return email_dict
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;Line&lt;/span&gt; &lt;span class="c"&gt;# Mem usage Increment Line Contents&lt;/span&gt;
+&lt;span class="o"&gt;================================================&lt;/span&gt;
+&lt;span class="mi"&gt;56&lt;/span&gt; &lt;span class="mf"&gt;46.0&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt;   &lt;span class="nd"&gt;@profile&lt;/span&gt;
+&lt;span class="mi"&gt;57&lt;/span&gt;                    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;get_bounced_emails&lt;/span&gt;&lt;span class="p"&gt;():&lt;/span&gt;
+&lt;span class="mi"&gt;58&lt;/span&gt; &lt;span class="mf"&gt;47.1&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt; &lt;span class="mf"&gt;1.1&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt;       &lt;span class="n"&gt;emails&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;db&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;session&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;query&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;EmailAddress&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;email_address&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;\
+&lt;span class="mi"&gt;59&lt;/span&gt; &lt;span class="mf"&gt;47.1&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt;           &lt;span class="n"&gt;join&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;send_history&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;send_history&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;email_id&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="n"&gt;EmailAddress&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;email_id&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;\
+&lt;span class="mi"&gt;60&lt;/span&gt; &lt;span class="mf"&gt;81.2&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt; &lt;span class="mf"&gt;34.1&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt;          &lt;span class="nb"&gt;filter&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;send_history&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;bounce&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;\
+&lt;span class="mi"&gt;61&lt;/span&gt;                            &lt;span class="nb"&gt;all&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+&lt;span class="mi"&gt;62&lt;/span&gt;
+&lt;span class="mi"&gt;63&lt;/span&gt; &lt;span class="mf"&gt;81.2&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt;       &lt;span class="n"&gt;email_dict&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;{}&lt;/span&gt;
+&lt;span class="mi"&gt;64&lt;/span&gt; &lt;span class="mf"&gt;84.2&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt; &lt;span class="mf"&gt;3.0&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt;       &lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="n"&gt;email&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="n"&gt;emails&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+&lt;span class="mi"&gt;65&lt;/span&gt; &lt;span class="mf"&gt;84.2&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt;           &lt;span class="n"&gt;email_dict&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="n"&gt;email&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;]]&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="bp"&gt;True&lt;/span&gt;
+&lt;span class="mi"&gt;66&lt;/span&gt;
+&lt;span class="mi"&gt;67&lt;/span&gt; &lt;span class="mf"&gt;65.9&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="mf"&gt;18.2&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt;     &lt;span class="k"&gt;del&lt;/span&gt; &lt;span class="n"&gt;emails&lt;/span&gt;
+&lt;span class="mi"&gt;68&lt;/span&gt; &lt;span class="mf"&gt;65.9&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt; &lt;span class="mf"&gt;0.0&lt;/span&gt; &lt;span class="n"&gt;MiB&lt;/span&gt;       &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="n"&gt;email_dict&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;Wow. By just grabbing that one field I seriously reduced the memory consumption of this method. I had under estimated just how much overhead there is in pulling the entire record in a query.&lt;/p&gt;
 &lt;p&gt;Now I take this into account when building queries. Just what do I need form the DB? Then I only grab that.&lt;/p&gt;
