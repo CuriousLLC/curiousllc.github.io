@@ -67,6 +67,7 @@
   <div>
     <div class="section" id="rump-kernels">
 <h2>Rump Kernels</h2>
+<p><em>[Updated for Python 3.5.1]</em></p>
 <p><a class="reference external" href="https://github.com/rumpkernel/wiki/wiki/Info:-FAQ#user-content-What_is_a_rump_kernel">Rump Kernels</a> are better explained by the FAQ than myself, so I suggest reading
 through it. But essentially a <strong>Rump Kernel</strong> is a kernel with everything but your bare
 essentials removed. Don't need a file system? Then don't bundle the file system
@@ -95,9 +96,14 @@ everything is compiled into a Unikernel.</p>
 <ul class="simple">
 <li><strong>Cross Compilation</strong>. The build-rr toolchain lets us build binaries for the Rump
 Kernel environment. The Python config scripts need to be patched in order to make
-this cross compilation option made available.</li>
+this cross compilation option available.</li>
 <li><strong>Static builds</strong>. Python needs to be compiled statically. We are creating a single,
 bootable, Unikernel. We can't rely on dynamic libraries being availble at runtime.</li>
+<li><strong>Bootstrapping Python</strong>. Python actually needs Python to build Python. This is
+problematic when we are cross compiling. The target Python (and tools) that we
+are building can't run on the host platform. This is solved by building Python
+twice. The first time we build for the host, and save the required binaries.
+The second time we cross build for the target, and use the host binaries to help.</li>
 </ul>
 <p>The Python package makes these cross compilation updates. It also modifies the
 <strong>Modules/Setup.dist</strong> file to build several modules statically along with Python.</p>
@@ -127,14 +133,14 @@ example. Now our goal is to:</p>
 <p>Building the Python environment is fairly straight forward. Using the same version of Python
 as your Unikernel (probably 3.4.3) create a virtual environment and install any packages
 you'd like available to your Unikernel. In this case we're just installing Flask.</p>
-<div class="highlight"><pre>pyvenv-3.4 helloworld-env
+<div class="highlight"><pre>pyvenv-3.5 helloworld-env
 <span class="nb">source </span>helloworld-env/bin/activate
 pip install flask
 </pre></div>
 <p>To include this environment in the Unikernel, we want to build an ISO containing our site
 packages. We will end up mounting this ISO inside the Unikernel. Just like we did for
 the static Python build.</p>
-<div class="highlight"><pre>genisoimage -r -o py3env.iso helloworld-env/lib/python3.4/site-packages
+<div class="highlight"><pre>genisoimage -r -o py3env.iso helloworld-env/lib/python3.5/site-packages
 </pre></div>
 <p>Setting up networking requires us to create a TAP device. This will let the host machine
 pass traffic to our Unikernel. We'll setup 10.0.120.100, and then our Unikernel will
@@ -167,18 +173,18 @@ and mount our Python environment in the site-packages directory that our Unikern
 
 cython --embed -v -3 -Werror main.py
 x86_64-rumprun-netbsd-gcc main.c -o main.o <span class="se">\</span>
-  -I../Python-3.4.3/pythondist/include/python3.4m <span class="se">\</span>
-  -L../Python-3.4.3/pythondist/lib <span class="se">\</span>
-  -lpython3.4m -lutil -lm -lz -lssl -lcrypto
+  -I../Python-3.5.1/pythondist/include/python3.5m <span class="se">\</span>
+  -L../Python-3.5.1/pythondist/lib <span class="se">\</span>
+  -lpython3.5m -lutil -lm -lz -lssl -lcrypto
 
 rumprun-bake hw_virtio main.bin main.o
 
 rumprun qemu -i <span class="se">\</span>
       -I <span class="k">if</span>,vioif,<span class="s1">&#39;-net tap,ifname=tap0,script=no&#39;</span><span class="se">\</span>
       -W <span class="k">if</span>,inet,static,10.0.120.101/24 <span class="se">\</span>
-      -b ../../python.iso,/python/lib/python3.4 <span class="se">\</span>
+      -b ../../python.iso,/python/lib/python3.5 <span class="se">\</span>
       -b ../../stubetc.iso,/etc <span class="se">\</span>
-      -b py3env.iso,/python/lib/python3.4/site-packages <span class="se">\</span>
+      -b py3env.iso,/python/lib/python3.5/site-packages <span class="se">\</span>
       -e <span class="nv">PYTHONHOME</span><span class="o">=</span>/python main.bin
 </pre></div>
 <p>Give it a shot. Run the script, and visit <a class="reference external" href="http://10.0.120.101:5000">http://10.0.120.101:5000</a>. You should get the

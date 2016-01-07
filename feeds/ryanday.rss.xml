@@ -101,6 +101,7 @@ all work together. Even though you don't have access to an oscilloscope, Piscope
 can help you play along with their tutorials.&lt;/p&gt;
 </description><dc:creator xmlns:dc="http://purl.org/dc/elements/1.1/">ryanday</dc:creator><pubDate>Sat, 15 Aug 2015 05:32:00 -0400</pubDate><guid>tag:projects.curiousllc.com,2015-08-15:examining-pwm-with-piscope.html</guid><category>raspberry pi 2</category><category>pwm</category><category>piscope</category></item><item><title>Flask in a Rump Kernel</title><link>http://projects.curiousllc.com/flask-in-a-rump-kernel.html</link><description>&lt;div class="section" id="rump-kernels"&gt;
 &lt;h2&gt;Rump Kernels&lt;/h2&gt;
+&lt;p&gt;&lt;em&gt;[Updated for Python 3.5.1]&lt;/em&gt;&lt;/p&gt;
 &lt;p&gt;&lt;a class="reference external" href="https://github.com/rumpkernel/wiki/wiki/Info:-FAQ#user-content-What_is_a_rump_kernel"&gt;Rump Kernels&lt;/a&gt; are better explained by the FAQ than myself, so I suggest reading
 through it. But essentially a &lt;strong&gt;Rump Kernel&lt;/strong&gt; is a kernel with everything but your bare
 essentials removed. Don't need a file system? Then don't bundle the file system
@@ -129,9 +130,14 @@ everything is compiled into a Unikernel.&lt;/p&gt;
 &lt;ul class="simple"&gt;
 &lt;li&gt;&lt;strong&gt;Cross Compilation&lt;/strong&gt;. The build-rr toolchain lets us build binaries for the Rump
 Kernel environment. The Python config scripts need to be patched in order to make
-this cross compilation option made available.&lt;/li&gt;
+this cross compilation option available.&lt;/li&gt;
 &lt;li&gt;&lt;strong&gt;Static builds&lt;/strong&gt;. Python needs to be compiled statically. We are creating a single,
 bootable, Unikernel. We can't rely on dynamic libraries being availble at runtime.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Bootstrapping Python&lt;/strong&gt;. Python actually needs Python to build Python. This is
+problematic when we are cross compiling. The target Python (and tools) that we
+are building can't run on the host platform. This is solved by building Python
+twice. The first time we build for the host, and save the required binaries.
+The second time we cross build for the target, and use the host binaries to help.&lt;/li&gt;
 &lt;/ul&gt;
 &lt;p&gt;The Python package makes these cross compilation updates. It also modifies the
 &lt;strong&gt;Modules/Setup.dist&lt;/strong&gt; file to build several modules statically along with Python.&lt;/p&gt;
@@ -161,14 +167,14 @@ example. Now our goal is to:&lt;/p&gt;
 &lt;p&gt;Building the Python environment is fairly straight forward. Using the same version of Python
 as your Unikernel (probably 3.4.3) create a virtual environment and install any packages
 you'd like available to your Unikernel. In this case we're just installing Flask.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;pyvenv-3.4 helloworld-env
+&lt;div class="highlight"&gt;&lt;pre&gt;pyvenv-3.5 helloworld-env
 &lt;span class="nb"&gt;source &lt;/span&gt;helloworld-env/bin/activate
 pip install flask
 &lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;To include this environment in the Unikernel, we want to build an ISO containing our site
 packages. We will end up mounting this ISO inside the Unikernel. Just like we did for
 the static Python build.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;genisoimage -r -o py3env.iso helloworld-env/lib/python3.4/site-packages
+&lt;div class="highlight"&gt;&lt;pre&gt;genisoimage -r -o py3env.iso helloworld-env/lib/python3.5/site-packages
 &lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;Setting up networking requires us to create a TAP device. This will let the host machine
 pass traffic to our Unikernel. We'll setup 10.0.120.100, and then our Unikernel will
@@ -201,18 +207,18 @@ and mount our Python environment in the site-packages directory that our Unikern
 
 cython --embed -v -3 -Werror main.py
 x86_64-rumprun-netbsd-gcc main.c -o main.o &lt;span class="se"&gt;\&lt;/span&gt;
-  -I../Python-3.4.3/pythondist/include/python3.4m &lt;span class="se"&gt;\&lt;/span&gt;
-  -L../Python-3.4.3/pythondist/lib &lt;span class="se"&gt;\&lt;/span&gt;
-  -lpython3.4m -lutil -lm -lz -lssl -lcrypto
+  -I../Python-3.5.1/pythondist/include/python3.5m &lt;span class="se"&gt;\&lt;/span&gt;
+  -L../Python-3.5.1/pythondist/lib &lt;span class="se"&gt;\&lt;/span&gt;
+  -lpython3.5m -lutil -lm -lz -lssl -lcrypto
 
 rumprun-bake hw_virtio main.bin main.o
 
 rumprun qemu -i &lt;span class="se"&gt;\&lt;/span&gt;
       -I &lt;span class="k"&gt;if&lt;/span&gt;,vioif,&lt;span class="s1"&gt;&amp;#39;-net tap,ifname=tap0,script=no&amp;#39;&lt;/span&gt;&lt;span class="se"&gt;\&lt;/span&gt;
       -W &lt;span class="k"&gt;if&lt;/span&gt;,inet,static,10.0.120.101/24 &lt;span class="se"&gt;\&lt;/span&gt;
-      -b ../../python.iso,/python/lib/python3.4 &lt;span class="se"&gt;\&lt;/span&gt;
+      -b ../../python.iso,/python/lib/python3.5 &lt;span class="se"&gt;\&lt;/span&gt;
       -b ../../stubetc.iso,/etc &lt;span class="se"&gt;\&lt;/span&gt;
-      -b py3env.iso,/python/lib/python3.4/site-packages &lt;span class="se"&gt;\&lt;/span&gt;
+      -b py3env.iso,/python/lib/python3.5/site-packages &lt;span class="se"&gt;\&lt;/span&gt;
       -e &lt;span class="nv"&gt;PYTHONHOME&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;/python main.bin
 &lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;Give it a shot. Run the script, and visit &lt;a class="reference external" href="http://10.0.120.101:5000"&gt;http://10.0.120.101:5000&lt;/a&gt;. You should get the
