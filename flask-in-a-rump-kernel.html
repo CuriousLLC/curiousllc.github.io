@@ -166,12 +166,12 @@ and mount our Python environment in the site-packages directory that our Unikern
 <span class="nv">PATH</span><span class="o">=</span>/home/rday/Development/os/rump/qemu/bin:<span class="nv">$PATH</span>:/home/rday/Development/os/rump/rumprun/app-tools
 
 cython --embed -v -3 -Werror main.py
-x86_64-rumprun-netbsd-gcc main.c <span class="se">\</span>
+x86_64-rumprun-netbsd-gcc main.c -o main.o <span class="se">\</span>
   -I../Python-3.4.3/pythondist/include/python3.4m <span class="se">\</span>
   -L../Python-3.4.3/pythondist/lib <span class="se">\</span>
   -lpython3.4m -lutil -lm -lz -lssl -lcrypto
 
-rumpbake hw_virtio a.bin a.out
+rumprun-bake hw_virtio main.bin main.o
 
 rumprun qemu -i <span class="se">\</span>
       -I <span class="k">if</span>,vioif,<span class="s1">&#39;-net tap,ifname=tap0,script=no&#39;</span><span class="se">\</span>
@@ -179,7 +179,7 @@ rumprun qemu -i <span class="se">\</span>
       -b ../../python.iso,/python/lib/python3.4 <span class="se">\</span>
       -b ../../stubetc.iso,/etc <span class="se">\</span>
       -b py3env.iso,/python/lib/python3.4/site-packages <span class="se">\</span>
-      -e <span class="nv">PYTHONHOME</span><span class="o">=</span>/python a.bin <span class="se">\</span>
+      -e <span class="nv">PYTHONHOME</span><span class="o">=</span>/python main.bin
 </pre></div>
 <p>Give it a shot. Run the script, and visit <a class="reference external" href="http://10.0.120.101:5000">http://10.0.120.101:5000</a>. You should get the
 &quot;Hello World&quot; message to pop up!</p>
